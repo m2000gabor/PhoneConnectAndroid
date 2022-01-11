@@ -6,6 +6,14 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+    <SurfaceView
+        android:id="@+id/surface"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <TextView
         android:id="@+id/textView4"
         android:layout_width="wrap_content"
@@ -42,7 +50,6 @@
         app:layout_constraintTop_toBottomOf="@+id/textView4" />
 
     <EditText
-        android:autofillHints=""
         android:id="@+id/ipAddr"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -57,7 +64,6 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
-        android:autofillHints=""
         android:hint="Port"
         android:inputType="number"
         app:layout_constraintEnd_toEndOf="parent"

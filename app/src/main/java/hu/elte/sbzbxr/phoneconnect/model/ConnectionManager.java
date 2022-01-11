@@ -71,6 +71,7 @@ public class ConnectionManager {
 
     //start a new Activity or what??
     public boolean startStreaming(){
+        //ScreenCapture screenCapture= new ScreenCapture();
         return false;
     }
 

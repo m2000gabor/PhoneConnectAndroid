@@ -1,6 +1,5 @@
 package hu.elte.sbzbxr.phoneconnect.model;
 
-import android.os.AsyncTask;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -9,7 +8,6 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.Objects;
 
 //inspired: http://www.androidcoding.in/2020/05/12/work-manager_onetimeworkrequest/
 public class ConnectionCreator2 extends RunnableWithHandler{
