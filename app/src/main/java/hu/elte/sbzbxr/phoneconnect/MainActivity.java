@@ -16,17 +16,14 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import hu.elte.sbzbxr.phoneconnect.model.ConnectionManager;
-import hu.elte.sbzbxr.phoneconnect.model.ScreenCapture;
 import hu.elte.sbzbxr.phoneconnect.ui.ScreenCaptureCallbacks;
 
 public class MainActivity extends AppCompatActivity implements ScreenCaptureCallbacks {
     static final String TAG = "ScreenCaptureFragment";
 
-    static final String STATE_RESULT_CODE = "result_code";
-    static final String STATE_RESULT_DATA = "result_data";
 
     static final int REQUEST_MEDIA_PROJECTION = 1;
-    private ScreenCapture screenCapture=null;
+    private ScreenCaptureBuilder screenCaptureBuilder =null;
     private SurfaceView mSurfaceView;
 
     private EditText ipEditText;
@@ -104,16 +101,7 @@ public class MainActivity extends AppCompatActivity implements ScreenCaptureCall
         mainActionButton.setOnClickListener(v -> startStreamingClicked());
 
         secondaryActionButton1.setVisibility(View.VISIBLE);
-        secondaryActionButton1.setOnClickListener(v -> {
-            connectionManager.ping();
-
-        });
-    }
-
-    private void startStreamingClicked(){
-        //connectionManager.startStreaming();
-        screenCapture = new ScreenCapture();
-        screenCapture.beforeUserRequest(this);
+        secondaryActionButton1.setOnClickListener(v -> connectionManager.ping());
     }
 
     public void successfulPing(String msg){
@@ -155,32 +143,13 @@ public class MainActivity extends AppCompatActivity implements ScreenCaptureCall
         secondaryActionButton1.setOnClickListener(null);
     }
 
-    @Override
-    public void screenCaptureStarted() {
-        mainActionButton.setText("Stop capture");
-        mainActionButton.setOnClickListener(v -> {
-            //screenCapture.stopScreenCapture();
-            screenCapture.stopSelf();
-        });
-    }
 
-    @Override
-    public void screenCaptureFinished() {
-        Toast.makeText(getApplicationContext(), "Screen capture finished", Toast.LENGTH_SHORT).show();
-        mainActionButton.setText("Start capture");
-        mainActionButton.setOnClickListener(v ->{screenCapture.beforeUserRequest(this);});
-    }
+    //For screenRecording
 
-    @Override
-    public Activity getActivity() {
-        return this;
-    }
+    private void startStreamingClicked(){
+        requestScreenCapturePermission();
+        //connectionManager.startStreaming();
 
-    @Override
-    public void showPermissionRequest(MediaProjectionManager mMediaProjectionManager) {
-        startActivityForResult(
-                mMediaProjectionManager.createScreenCaptureIntent(),
-                REQUEST_MEDIA_PROJECTION);
     }
 
     @Override
@@ -189,41 +158,41 @@ public class MainActivity extends AppCompatActivity implements ScreenCaptureCall
         if (requestCode == REQUEST_MEDIA_PROJECTION) {
             if (resultCode != Activity.RESULT_OK) {
                 Log.i(TAG, "User cancelled");
-                Toast.makeText(getActivity(), "User cancelled", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "User cancelled", Toast.LENGTH_SHORT).show();
                 return;
             }
-            Activity activity = getActivity();
-            if (activity == null) {
-                return;
-            }
+
             Log.i(TAG, "Starting screen capture");
-            screenCapture.mResultCode = resultCode;
-            screenCapture.mResultData = data;
-            startScreenCapture();
+            startScreenCaptureAndRecord(resultCode,data);
         }
     }
 
-    private void startScreenCapture(){
-        Context context = getActivity().getApplicationContext();
-        Intent intent = new Intent(this.getActivity(),ScreenCapture.class); // Build the intent for the service
-        context.startForegroundService(intent);
+
+    private void startScreenCaptureAndRecord(int resultCode, Intent data){
+        screenCaptureBuilder = new ScreenCaptureBuilder(this);
+        screenCaptureBuilder.start(resultCode,data,mediaProjectionManager);
+        screenCaptureStarted();
+        /*
+        Context context = getApplicationContext();
+        Intent intent = new Intent(this,ScreenCapture.class); // Build the intent for the service
+        context.startForegroundService(intent);*/
     }
 
-    @Override
-    public void onPause() {
-        super.onPause();
-        screenCapture.stopSelf();
+    private void screenCaptureStarted(){
+        mainActionButton.setText("Stop recording");
+        mainActionButton.setOnClickListener(v -> stopScreenCaptureAndRecord());
     }
 
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        screenCapture.stopSelf();
-        //screenCapture.tearDownMediaProjection();
+    private void stopScreenCaptureAndRecord(){
+        screenCaptureBuilder.stop();
+        mainActionButton.setText("Start recording");
+        mainActionButton.setOnClickListener(v -> startStreamingClicked());
     }
 
-    @Override
-    public SurfaceView getSurfaceView() {
-        return mSurfaceView;
+    private MediaProjectionManager mediaProjectionManager;
+
+    private void requestScreenCapturePermission(){
+        mediaProjectionManager = (MediaProjectionManager) this.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+        startActivityForResult(mediaProjectionManager.createScreenCaptureIntent(), REQUEST_MEDIA_PROJECTION);
     }
 }

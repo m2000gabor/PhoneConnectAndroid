@@ -2,136 +2,118 @@ package hu.elte.sbzbxr.phoneconnect;
 
 import android.app.Activity;
 import android.app.Service;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ServiceInfo;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
+import android.media.CamcorderProfile;
+import android.media.MediaRecorder;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
+import android.os.Bundle;
 import android.os.IBinder;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Surface;
 import android.view.SurfaceView;
 
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 
-import hu.elte.sbzbxr.phoneconnect.ui.ScreenCaptureCallbacks;
+import java.io.File;
+import java.io.IOException;
 
-public class ScreenCaptureBuilder extends Service {
-    public static final String TAG = "ScreenCaptureFragment";
-    private int mScreenDensity;
-    public int mResultCode;
-    public Intent mResultData;
+import hu.elte.sbzbxr.phoneconnect.model.ScreenCapture;
 
 
-    private Surface mSurface;
-    private MediaProjection mMediaProjection;
-    private VirtualDisplay mVirtualDisplay;
-    private MediaProjectionManager mMediaProjectionManager;
+public class ScreenCaptureBuilder {
+    private static final String VIRTUAL_DISPLAY_NAME= "VD";
+    private MediaRecorder mediaRecorder;
+    private final MainActivity mainActivity;
+    DisplayMetrics metrics;
+    MediaProjectionManager mediaProjectionManager;
+    MediaProjection projection;
+    VirtualDisplay mVirtualDisplay;
+    ComponentName componentName;
 
-
-    private ScreenCaptureCallbacks viewCallback;
-
-    private Activity getActivity(){return viewCallback.getActivity();}
-
-    public ScreenCaptureBuilder(){}
-
-    private void init(){
-        Activity activity = getActivity();
-        DisplayMetrics metrics = new DisplayMetrics();
-        activity.getWindowManager().getDefaultDisplay().getMetrics(metrics);
-        mScreenDensity = metrics.densityDpi;
-        mMediaProjectionManager = (MediaProjectionManager)
-                activity.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
-        mSurface=viewCallback.getSurfaceView().getHolder().getSurface();
+    ScreenCaptureBuilder(MainActivity mainActivity){
+        this.mainActivity=mainActivity;
     }
 
-    private void setUpMediaProjection() {
+    private void setupMetrics(){
+        metrics = new DisplayMetrics();
+        mainActivity.getWindowManager().getDefaultDisplay().getMetrics(metrics);
+    }
+
+    public void start(int resultCode, Intent data,MediaProjectionManager manager){
+        //mediaProjectionManager=manager;
+        setupMetrics();
+
+
+        Intent intent = new Intent(mainActivity, ScreenCapture.class);
+        intent.putExtra("resultCode",resultCode);
+        intent.putExtra("data",data);
+        intent.putExtra("metrics_width", this.metrics.widthPixels);
+        intent.putExtra("metrics_height", this.metrics.heightPixels);
+        intent.putExtra("metrics_densityDpi", this.metrics.densityDpi);
+        //componentName = mainActivity.startForegroundService(intent, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION);
+        //ContextCompat.startForegroundService(mainActivity,intent);
+        componentName = mainActivity.startService(intent);
+
         /*
-        Context context = getActivity().getApplicationContext();
-        Intent intent = new Intent(getActivity(),this); // Build the intent for the service
-        context.startForegroundService(intent);*/
-        mMediaProjection = mMediaProjectionManager.getMediaProjection(mResultCode, mResultData);
-    }
-
-    private void tearDownMediaProjection() {
-        if (mMediaProjection != null) {
-            mMediaProjection.stop();
-            mMediaProjection = null;
-        }
-        System.err.println("Teared down");
-    }
-
-    public void beforeUserRequest(ScreenCaptureCallbacks main) {
-        viewCallback= main;
-        init();
-        Log.i(TAG, "Requesting confirmation");
-        // This initiates a prompt dialog for the user to confirm screen projection.
-        viewCallback.showPermissionRequest(mMediaProjectionManager);
-        /*
-        Activity activity = getActivity();
-        if (mSurface == null || activity == null) {
-            return;
-        }
-        if (mMediaProjection != null) {
-            setUpVirtualDisplay();
-        } else if (mResultCode != 0 && mResultData != null) {
-            setUpMediaProjection();
-            setUpVirtualDisplay();
+        mainActivity.startService(intent);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent);
         } else {
-            Log.i(TAG, "Requesting confirmation");
-            // This initiates a prompt dialog for the user to confirm screen projection.
-            viewCallback.showPermissionRequest(mMediaProjectionManager);
+            startService(intent);
         }*/
 
+        /*
+        createMediaProjection(resultCode,data);
+        createScreenRecorder();
+        mirroring();
+        mediaRecorder.start();//maybe?
+        */
     }
 
-    private void setUpVirtualDisplay() {
-        Log.i(TAG, "Setting up a VirtualDisplay: " +
-                viewCallback.getSurfaceView().getWidth() + "x" + viewCallback.getSurfaceView().getHeight() +
-                " (" + mScreenDensity + ")");
-        mVirtualDisplay = mMediaProjection.createVirtualDisplay("ScreenCapture",
-                viewCallback.getSurfaceView().getWidth(), viewCallback.getSurfaceView().getHeight(), mScreenDensity,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                mSurface, null, null);
-
+    private void createMediaProjection(int resultCode, Intent data){
+        projection = mediaProjectionManager.getMediaProjection(resultCode, data);
     }
 
-    private void stopScreenCapture() {
-        if (mVirtualDisplay == null) {
-            return;
+
+    public void createScreenRecorder(){
+        mediaRecorder= new MediaRecorder();
+        mediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+        CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH);
+        profile.videoFrameHeight = metrics.heightPixels;
+        profile.videoFrameWidth = metrics.widthPixels;
+        mediaRecorder.setProfile(profile);
+        mediaRecorder.setOutputFile(new File("test"));
+        try {
+            mediaRecorder.prepare();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+    }
+
+    private void mirroring(){
+        mVirtualDisplay = projection.createVirtualDisplay(VIRTUAL_DISPLAY_NAME,
+                metrics.widthPixels, metrics.heightPixels, metrics.densityDpi,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                mediaRecorder.getSurface(), null, null);
+    }
+
+    public void stop(){
+        mainActivity.stopService(new Intent().setComponent(componentName));
+
+        /*
+        mediaRecorder.stop();
+        projection.stop();
         mVirtualDisplay.release();
-        mVirtualDisplay = null;
-        System.err.println("Screen ca" +
-                "pture stopped");
-        viewCallback.screenCaptureFinished();
-    }
-
-    @Override
-    public void onCreate() {
-        super.onCreate();
-    }
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        super.onStartCommand(intent, flags, startId);
-        setUpMediaProjection();
-        setUpVirtualDisplay();
-        viewCallback.screenCaptureStarted();
-        return START_STICKY;
-    }
-
-    @Override
-    public void onDestroy() {
-        stopScreenCapture();
-        super.onDestroy();
-    }
-
-    @Nullable
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
+         */
     }
 }
