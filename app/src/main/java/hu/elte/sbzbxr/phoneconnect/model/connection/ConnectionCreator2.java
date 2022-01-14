@@ -1,4 +1,4 @@
-package hu.elte.sbzbxr.phoneconnect.model;
+package hu.elte.sbzbxr.phoneconnect.model.connection;
 
 import android.util.Log;
 
@@ -10,7 +10,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 
 //inspired: http://www.androidcoding.in/2020/05/12/work-manager_onetimeworkrequest/
-public class ConnectionCreator2 extends RunnableWithHandler{
+public class ConnectionCreator2 extends RunnableWithHandler {
     private Socket socket;
     private PrintStream out;
     private BufferedReader in;

@@ -1,10 +1,11 @@
-package hu.elte.sbzbxr.phoneconnect;
+package hu.elte.sbzbxr.phoneconnect.controller;
 
 import android.content.ComponentName;
 import android.content.Intent;
 import android.util.DisplayMetrics;
 
-import hu.elte.sbzbxr.phoneconnect.model.ScreenCapture;
+import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
+import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenCapture;
 
 
 public class ScreenCaptureBuilder {
@@ -12,7 +13,7 @@ public class ScreenCaptureBuilder {
     DisplayMetrics metrics;
     ComponentName componentName;
 
-    ScreenCaptureBuilder(MainActivity mainActivity){
+    public ScreenCaptureBuilder(MainActivity mainActivity){
         this.mainActivity=mainActivity;
     }
 

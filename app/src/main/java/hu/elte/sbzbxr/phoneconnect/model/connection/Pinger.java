@@ -1,11 +1,11 @@
-package hu.elte.sbzbxr.phoneconnect.model;
+package hu.elte.sbzbxr.phoneconnect.model.connection;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.SocketException;
 
-public class Pinger extends RunnableWithHandler{
+public class Pinger extends RunnableWithHandler {
     private final PrintStream out;
     private final BufferedReader in;
     private String receivedMessage;

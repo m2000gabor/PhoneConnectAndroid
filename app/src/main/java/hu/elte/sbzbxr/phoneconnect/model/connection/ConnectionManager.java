@@ -1,4 +1,4 @@
-package hu.elte.sbzbxr.phoneconnect.model;
+package hu.elte.sbzbxr.phoneconnect.model.connection;
 
 import android.os.Handler;
 import android.os.Looper;
@@ -11,7 +11,7 @@ import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import hu.elte.sbzbxr.phoneconnect.MainActivity;
+import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 
 public class ConnectionManager {
 

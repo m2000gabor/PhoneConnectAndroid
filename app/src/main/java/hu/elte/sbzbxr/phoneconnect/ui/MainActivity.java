@@ -1,4 +1,4 @@
-package hu.elte.sbzbxr.phoneconnect;
+package hu.elte.sbzbxr.phoneconnect.ui;
 
 import android.app.Activity;
 import android.content.Context;
@@ -14,10 +14,11 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import hu.elte.sbzbxr.phoneconnect.model.ConnectionManager;
-import hu.elte.sbzbxr.phoneconnect.ui.ScreenCaptureCallbacks;
+import hu.elte.sbzbxr.phoneconnect.R;
+import hu.elte.sbzbxr.phoneconnect.controller.ScreenCaptureBuilder;
+import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
 
-public class MainActivity extends AppCompatActivity implements ScreenCaptureCallbacks {
+public class MainActivity extends AppCompatActivity {
     static final String TAG = "ScreenCaptureFragment";
 
 

@@ -1,4 +1,4 @@
-package hu.elte.sbzbxr.phoneconnect.model;
+package hu.elte.sbzbxr.phoneconnect.model.recording;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -29,7 +29,7 @@ import java.io.FileDescriptor;
 import java.io.IOException;
 import java.util.Calendar;
 
-import hu.elte.sbzbxr.phoneconnect.MainActivity;
+import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 
 public class ScreenCapture extends Service {
     private static final String VIRTUAL_DISPLAY_NAME= "VD";
