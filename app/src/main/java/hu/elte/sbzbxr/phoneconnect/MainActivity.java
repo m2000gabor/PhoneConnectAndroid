@@ -1,19 +1,18 @@
 package hu.elte.sbzbxr.phoneconnect;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.media.projection.MediaProjectionManager;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 import hu.elte.sbzbxr.phoneconnect.model.ConnectionManager;
 import hu.elte.sbzbxr.phoneconnect.ui.ScreenCaptureCallbacks;
@@ -24,7 +23,6 @@ public class MainActivity extends AppCompatActivity implements ScreenCaptureCall
 
     static final int REQUEST_MEDIA_PROJECTION = 1;
     private ScreenCaptureBuilder screenCaptureBuilder =null;
-    private SurfaceView mSurfaceView;
 
     private EditText ipEditText;
     private EditText portEditText;
@@ -47,7 +45,7 @@ public class MainActivity extends AppCompatActivity implements ScreenCaptureCall
         receivedMessageLabel = (TextView) findViewById(R.id.receivedMessageLabel);
         mainActionButton = (Button) findViewById(R.id.mainActionButton);
         secondaryActionButton1 = (Button) findViewById(R.id.secondaryActionButton1);
-        mSurfaceView =(SurfaceView) findViewById(R.id.surface);
+        //mSurfaceView =(SurfaceView) findViewById(R.id.surface);
 
         /**
          * @apiNote
@@ -148,8 +146,6 @@ public class MainActivity extends AppCompatActivity implements ScreenCaptureCall
 
     private void startStreamingClicked(){
         requestScreenCapturePermission();
-        //connectionManager.startStreaming();
-
     }
 
     @Override
@@ -170,12 +166,8 @@ public class MainActivity extends AppCompatActivity implements ScreenCaptureCall
 
     private void startScreenCaptureAndRecord(int resultCode, Intent data){
         screenCaptureBuilder = new ScreenCaptureBuilder(this);
-        screenCaptureBuilder.start(resultCode,data,mediaProjectionManager);
+        screenCaptureBuilder.start(resultCode,data);
         screenCaptureStarted();
-        /*
-        Context context = getApplicationContext();
-        Intent intent = new Intent(this,ScreenCapture.class); // Build the intent for the service
-        context.startForegroundService(intent);*/
     }
 
     private void screenCaptureStarted(){
@@ -189,10 +181,8 @@ public class MainActivity extends AppCompatActivity implements ScreenCaptureCall
         mainActionButton.setOnClickListener(v -> startStreamingClicked());
     }
 
-    private MediaProjectionManager mediaProjectionManager;
-
     private void requestScreenCapturePermission(){
-        mediaProjectionManager = (MediaProjectionManager) this.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+        MediaProjectionManager mediaProjectionManager = (MediaProjectionManager) this.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
         startActivityForResult(mediaProjectionManager.createScreenCaptureIntent(), REQUEST_MEDIA_PROJECTION);
     }
 }

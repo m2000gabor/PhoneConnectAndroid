@@ -19,7 +19,7 @@ public class ConnectionManager {
     private Socket socket;
     private PrintStream out;
     private BufferedReader in;
-    private MainActivity view;
+    private final MainActivity view;
 
     public ConnectionManager(MainActivity mainActivity) {
         this.view = mainActivity;
