@@ -25,7 +25,7 @@
         <service
             android:name=".model.ScreenCapture"
             android:enabled="true"
-            android:exported="true"
+            android:exported="false"
             android:stopWithTask="true"
             android:foregroundServiceType="mediaProjection" />
 

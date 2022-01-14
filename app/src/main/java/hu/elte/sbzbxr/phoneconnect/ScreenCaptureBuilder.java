@@ -46,7 +46,7 @@ public class ScreenCaptureBuilder {
 
     private void setupMetrics(){
         metrics = new DisplayMetrics();
-        mainActivity.getWindowManager().getDefaultDisplay().getMetrics(metrics);
+        mainActivity.getWindowManager().getDefaultDisplay().getRealMetrics(metrics);
     }
 
     public void start(int resultCode, Intent data,MediaProjectionManager manager){

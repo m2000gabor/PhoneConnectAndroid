@@ -26,8 +26,8 @@ import androidx.core.app.NotificationCompat;
 
 import java.io.File;
 import java.io.FileDescriptor;
-import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Calendar;
 
 import hu.elte.sbzbxr.phoneconnect.MainActivity;
 
@@ -106,18 +106,8 @@ public class ScreenCapture extends Service {
 
         //create screen recorder
         mediaRecorder= new MediaRecorder();
-        mediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+        setRecorderProfileMP4(mediaRecorder, metrics_width, metrics_height);
 
-        CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH);
-        //profile.videoFrameHeight = metrics_height;
-        //profile.videoFrameWidth = metrics_width;
-        //mediaRecorder.setProfile(profile);
-        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-        mediaRecorder.setVideoFrameRate(profile.videoFrameRate);
-        mediaRecorder.setVideoSize(profile.videoFrameWidth, profile.videoFrameHeight);
-        mediaRecorder.setVideoEncodingBitRate(profile.videoBitRate);
-        mediaRecorder.setVideoEncoder(profile.videoCodec);
-        mediaRecorder.setOutputFile(getFileLocation2());
         try {
             mediaRecorder.prepare();
         } catch (IOException e) {
@@ -132,6 +122,30 @@ public class ScreenCapture extends Service {
 
 
         mediaRecorder.start();
+    }
+
+    //.3gp, untested
+    private void setRecorderProfile3gp(MediaRecorder mediaRecorder, int metrics_width, int metrics_height) {
+        mediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+        CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH);
+        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+        mediaRecorder.setVideoFrameRate(profile.videoFrameRate);
+        mediaRecorder.setVideoSize(metrics_width, metrics_height);
+        mediaRecorder.setVideoEncodingBitRate(MediaRecorder.VideoEncoder.H263);
+        mediaRecorder.setVideoEncoder(profile.videoCodec);
+        mediaRecorder.setOutputFile(getFileLocation2(".mp4"));
+    }
+
+    private void setRecorderProfileMP4(MediaRecorder mediaRecorder, int metrics_width, int metrics_height) {
+        //metrics_height=2340;
+        mediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+        CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH);
+        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+        mediaRecorder.setVideoFrameRate(profile.videoFrameRate);
+        mediaRecorder.setVideoSize(metrics_width, metrics_height);
+        mediaRecorder.setVideoEncodingBitRate(profile.videoBitRate);
+        mediaRecorder.setVideoEncoder(profile.videoCodec);
+        mediaRecorder.setOutputFile(getFileLocation2(".mp4"));
     }
 
     //From: https://developer.android.com/training/data-storage/shared/media#add-item
@@ -175,8 +189,9 @@ public class ScreenCapture extends Service {
         return null;
     }
 
-    private File getFileLocation2(){
-        File f = new File(getApplicationContext().getFilesDir(), "testFile.mp4");
+    // Saves to: /data/user/0/hu.elte.sbzbxr.phoneconnect/files/**timeDate**.mp4
+    private File getFileLocation2(String fileExtension){
+        File f = new File(getApplicationContext().getFilesDir(), "testFile_"+ Calendar.getInstance().getTime()+fileExtension);
         return f;
     }
 
