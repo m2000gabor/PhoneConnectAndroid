@@ -1,8 +1,10 @@
 package hu.elte.sbzbxr.phoneconnect.ui;
 
 import android.app.Activity;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.media.projection.MediaProjectionManager;
 import android.os.Bundle;
 import android.util.Log;
@@ -13,6 +15,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import hu.elte.sbzbxr.phoneconnect.R;
 import hu.elte.sbzbxr.phoneconnect.controller.ScreenCaptureBuilder;
@@ -185,5 +188,27 @@ public class MainActivity extends AppCompatActivity {
     private void requestScreenCapturePermission(){
         MediaProjectionManager mediaProjectionManager = (MediaProjectionManager) this.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
         startActivityForResult(mediaProjectionManager.createScreenCaptureIntent(), REQUEST_MEDIA_PROJECTION);
+    }
+
+    //getting messages from service
+    private final BroadcastReceiver messageReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String finishedFileName = intent.getStringExtra("filename");
+            connectionManager.sendSegment(finishedFileName);
+        }
+    };
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        LocalBroadcastManager.getInstance(this)
+                .registerReceiver(messageReceiver, new IntentFilter("my-message"));
+    }
+
+    @Override
+    protected void onPause() {
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(messageReceiver);
+        super.onPause();
     }
 }

@@ -69,12 +69,6 @@ public class ConnectionManager {
         startAsyncTask(new Pinger(out,in,this));
     }
 
-    //start a new Activity or what??
-    public boolean startStreaming(){
-        //ScreenCapture screenCapture= new ScreenCapture();
-        return false;
-    }
-
     void connectRequestFinished(boolean successful, String ip, int port, BufferedReader i, PrintStream o){
         in=i;
         out=o;
@@ -98,4 +92,7 @@ public class ConnectionManager {
         }
     }
 
+    public void sendSegment(String finishedFileName) {
+
+    }
 }

@@ -5,8 +5,6 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.ContentResolver;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.hardware.display.DisplayManager;
@@ -15,23 +13,22 @@ import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
-import android.net.Uri;
-import android.os.Build;
 import android.os.IBinder;
-import android.os.ParcelFileDescriptor;
-import android.provider.MediaStore;
+import android.util.Log;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.io.File;
-import java.io.FileDescriptor;
 import java.io.IOException;
+import java.text.DateFormat;
 import java.util.Calendar;
 
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 
 public class ScreenCapture extends Service {
+    private static final String MEDIA_RECORDER_LOG ="MediaRecorder ";
     private static final String VIRTUAL_DISPLAY_NAME= "VD";
     MediaProjection projection;
     MediaProjectionManager mediaProjectionManager;
@@ -106,6 +103,25 @@ public class ScreenCapture extends Service {
 
         //create screen recorder
         mediaRecorder= new MediaRecorder();
+        mediaRecorder.setOnInfoListener(new MediaRecorder.OnInfoListener() {
+            @Override
+            public void onInfo(MediaRecorder mr, int what, int extra) {
+                if(what==MediaRecorder.MEDIA_RECORDER_INFO_MAX_FILESIZE_APPROACHING){
+                    Log.i(MEDIA_RECORDER_LOG, "Max filesize approaching");
+                }else if(what==MediaRecorder.MEDIA_RECORDER_INFO_MAX_FILESIZE_REACHED){
+                    Log.i(MEDIA_RECORDER_LOG, "Max filesize reached");
+                    mr.setOutputFile(getFileLocation_Continuously());
+                }else if(what==MediaRecorder.MEDIA_RECORDER_INFO_NEXT_OUTPUT_FILE_STARTED){
+                    Log.i(MEDIA_RECORDER_LOG, "Next outputfile started");
+                    try {
+                        mr.setNextOutputFile(getFileLocation_Continuously());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    finishedFile();
+                }
+            }
+        });
         setRecorderProfileMP4(mediaRecorder, metrics_width, metrics_height);
 
         try {
@@ -122,22 +138,15 @@ public class ScreenCapture extends Service {
 
 
         mediaRecorder.start();
-    }
 
-    //.3gp, untested
-    private void setRecorderProfile3gp(MediaRecorder mediaRecorder, int metrics_width, int metrics_height) {
-        mediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
-        CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH);
-        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-        mediaRecorder.setVideoFrameRate(profile.videoFrameRate);
-        mediaRecorder.setVideoSize(metrics_width, metrics_height);
-        mediaRecorder.setVideoEncodingBitRate(MediaRecorder.VideoEncoder.H263);
-        mediaRecorder.setVideoEncoder(profile.videoCodec);
-        mediaRecorder.setOutputFile(getFileLocation2(".mp4"));
+        try {
+            mediaRecorder.setNextOutputFile(getFileLocation_Continuously());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void setRecorderProfileMP4(MediaRecorder mediaRecorder, int metrics_width, int metrics_height) {
-        //metrics_height=2340;
         mediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
         CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH);
         mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
@@ -145,54 +154,46 @@ public class ScreenCapture extends Service {
         mediaRecorder.setVideoSize(metrics_width, metrics_height);
         mediaRecorder.setVideoEncodingBitRate(profile.videoBitRate);
         mediaRecorder.setVideoEncoder(profile.videoCodec);
-        mediaRecorder.setOutputFile(getFileLocation2(".mp4"));
+        //mediaRecorder.setOutputFile(getFileLocation2(".mp4"));
+        mediaRecorder.setOutputFile(getFileLocation_Continuously());
+
+        mediaRecorder.setMaxFileSize(5000000);
     }
 
-    //From: https://developer.android.com/training/data-storage/shared/media#add-item
-    private FileDescriptor getFileLocation(){
-        // Add a media item that other apps shouldn't see until the item is
-        // fully written to the media store.
-        ContentResolver resolver = getApplicationContext()
-                .getContentResolver();
-
-        // Find all video files on the primary external storage device.
-        Uri videoCollection;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            videoCollection = MediaStore.Video.Media
-                    .getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
-        } else {
-            videoCollection = MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
-        }
-
-        ContentValues newSongDetails = new ContentValues();
-        newSongDetails.put(MediaStore.Video.Media.DISPLAY_NAME,
-                "My Workout Playlist.mp3");
-
-        Uri songContentUri = resolver
-                .insert(videoCollection, newSongDetails);
-
-        try (
-                ParcelFileDescriptor pfd =
-                     resolver.openFileDescriptor(songContentUri, "rw", null)) {
-            // Write data into the pending audio file.
-            return pfd.getFileDescriptor();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        /*
-        // Now that we're finished, release the "pending" status, and allow other apps
-        // to play the audio track.
-        newSongDetails.clear();
-        newSongDetails.put(MediaStore.Audio.Media.IS_PENDING, 0);
-        resolver.update(songContentUri, newSongDetails, null, null);*/
-        return null;
-    }
 
     // Saves to: /data/user/0/hu.elte.sbzbxr.phoneconnect/files/**timeDate**.mp4
-    private File getFileLocation2(String fileExtension){
-        File f = new File(getApplicationContext().getFilesDir(), "testFile_"+ Calendar.getInstance().getTime()+fileExtension);
+    private @Deprecated File getFileLocation2(String fileExtension){
+        File f = new File(getApplicationContext().getFilesDir(), "testFile_"+ Calendar.getInstance().get(Calendar.DATE)+fileExtension);
         return f;
+    }
+
+
+    private int filenameCounter =0;
+    private String videoBaseName="";
+    private String oldFileName="";
+    private String newFileName="";
+    private File getFileLocation_Continuously(){
+        if(filenameCounter==0){
+            String timestamp= DateFormat.getDateTimeInstance().format(Calendar.getInstance().getTime()).toString().replace(':','_');
+            videoBaseName="PhoneC_"+timestamp;}
+        String fileExtension= ".mp4";
+        String partNum = "__part"+ filenameCounter;
+        String finalFileName=videoBaseName+partNum+fileExtension;
+        filenameCounter++;
+        oldFileName = newFileName;
+        newFileName = finalFileName;
+        return new File(getApplicationContext().getFilesDir(), finalFileName );
+    }
+
+    private void finishedFile(){
+        sendMessageToActivity(oldFileName);
+    }
+
+    //From: https://stackoverflow.com/questions/30629071/sending-a-simple-message-from-service-to-activity
+    private void sendMessageToActivity(String str) {
+        Intent intent = new Intent("SegmentFinished");
+        intent.putExtra("filename", str);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 
 }
