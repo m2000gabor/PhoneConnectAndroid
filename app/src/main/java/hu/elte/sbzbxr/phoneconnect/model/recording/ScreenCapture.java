@@ -157,7 +157,7 @@ public class ScreenCapture extends Service {
         //mediaRecorder.setOutputFile(getFileLocation2(".mp4"));
         mediaRecorder.setOutputFile(getFileLocation_Continuously());
 
-        mediaRecorder.setMaxFileSize(5000000);
+        mediaRecorder.setMaxFileSize(10000000);
     }
 
 
@@ -186,14 +186,7 @@ public class ScreenCapture extends Service {
     }
 
     private void finishedFile(){
-        sendMessageToActivity(oldFileName);
-    }
 
-    //From: https://stackoverflow.com/questions/30629071/sending-a-simple-message-from-service-to-activity
-    private void sendMessageToActivity(String str) {
-        Intent intent = new Intent("SegmentFinished");
-        intent.putExtra("filename", str);
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 
 }

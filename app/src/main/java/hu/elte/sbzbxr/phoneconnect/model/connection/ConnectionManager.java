@@ -3,10 +3,9 @@ package hu.elte.sbzbxr.phoneconnect.model.connection;
 import android.os.Handler;
 import android.os.Looper;
 
-import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
-import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -14,11 +13,10 @@ import java.util.concurrent.Executors;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 
 public class ConnectionManager {
-
-    private InetSocketAddress serverAddress;
+    private boolean isListening = false;
     private Socket socket;
     private PrintStream out;
-    private BufferedReader in;
+    private InputStream in;
     private final MainActivity view;
 
     public ConnectionManager(MainActivity mainActivity) {
@@ -32,15 +30,8 @@ public class ConnectionManager {
             System.err.println("Invalid parameters");
             return;
         }
-
-        //serverAddress = new InetSocketAddress(ip, port);
-        //System.out.println("Let's connect to this: " + serverAddress.toString());
-
-
         // Connect to the server
-
-        startAsyncTask(new ConnectionCreator2(socket,out,in,ip,port,this));
-        //new ConnectionCreator(socket,out,in,ip,port,this).execute();
+        startAsyncTask(new ConnectionCreator2(out,in,ip,port,this));
     }
 
     //From: https://www.simplifiedcoding.net/android-asynctask/
@@ -55,6 +46,7 @@ public class ConnectionManager {
 
     public void disconnect(){
         try {
+            isListening =false;
             if(in==null || out==null || socket==null){return;}
             in.close();
             out.close();
@@ -65,11 +57,12 @@ public class ConnectionManager {
     }
 
     //Tests whether the connection is valid
-    public void ping(){
-        startAsyncTask(new Pinger(out,in,this));
+    public void sendPing(){
+        startAsyncTask(new PingSender(out, this));
     }
 
-    void connectRequestFinished(boolean successful, String ip, int port, BufferedReader i, PrintStream o){
+    void connectRequestFinished(boolean successful,Socket s, String ip, int port, InputStream i, PrintStream o){
+        socket=s;
         in=i;
         out=o;
         if(successful){
@@ -77,22 +70,46 @@ public class ConnectionManager {
             if (out == null) {
                 System.err.println("But its null!!");
             }
+            System.out.println("Successful connection establishment");
+            isListening =true;
         }else{
             view.showFailMessage("Could not establish the connection!");
         }
+
+        listen();
     }
 
-    void pingRequestFinished(boolean successful, String read){
-        if(successful){
-            view.successfulPing(read);
-        }else{
-            disconnect();
-            view.showFailMessage("Ping failed! Disconnected!");
-            view.afterDisconnect();
-        }
+    private void listen(){
+        new Thread(() -> {
+            while (isListening) {
+                try {
+                    MyNetworkProtocolFrame frame = MyNetworkProtocolFrame.inputStreamToFrame(in);
+                    switch (frame.getType()) {
+                        case PROTOCOL_PING: pingRequestFinished(true,frame );break;
+                        default: throw new RuntimeException("Unhandled type");
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    disconnect();
+                }
+            }
+        }).start();
     }
 
-    public void sendSegment(String finishedFileName) {
+    void pingRequestFinished(boolean successful, MyNetworkProtocolFrame frame){
+        view.runOnUiThread(() -> {
+            if(successful){
+                view.successfulPing(new String(frame.getData()));
+                System.out.println("Successful ping! \nReceived message: "+new String(frame.getData()));
+            }else{
+                disconnect();
+                view.showFailMessage("Ping failed! Disconnected!");
+                view.afterDisconnect();
+            }
+        });
+    }
 
+    public void sendSegment(String path) {
+        startAsyncTask(new FileSender(out,path));
     }
 }

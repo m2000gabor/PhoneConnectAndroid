@@ -17,6 +17,8 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import java.io.File;
+
 import hu.elte.sbzbxr.phoneconnect.R;
 import hu.elte.sbzbxr.phoneconnect.controller.ScreenCaptureBuilder;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
@@ -34,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView receivedMessageLabel;
     private Button mainActionButton;
     private Button secondaryActionButton1;
+    private Button secondaryActionButton2;
     private ConnectionManager connectionManager;
 
     @Override
@@ -49,6 +52,7 @@ public class MainActivity extends AppCompatActivity {
         receivedMessageLabel = (TextView) findViewById(R.id.receivedMessageLabel);
         mainActionButton = (Button) findViewById(R.id.mainActionButton);
         secondaryActionButton1 = (Button) findViewById(R.id.secondaryActionButton1);
+        secondaryActionButton2 = (Button) findViewById(R.id.secondaryActionButton2);
         //mSurfaceView =(SurfaceView) findViewById(R.id.surface);
 
         /**
@@ -67,10 +71,6 @@ public class MainActivity extends AppCompatActivity {
             }
 
             connectionManager.connect(ip, port);
-
-
-
-
         });
 
         prefillEditTexts();
@@ -103,7 +103,14 @@ public class MainActivity extends AppCompatActivity {
         mainActionButton.setOnClickListener(v -> startStreamingClicked());
 
         secondaryActionButton1.setVisibility(View.VISIBLE);
-        secondaryActionButton1.setOnClickListener(v -> connectionManager.ping());
+        secondaryActionButton1.setOnClickListener(v -> connectionManager.sendPing());
+
+        secondaryActionButton2.setVisibility(View.VISIBLE);
+        secondaryActionButton2.setOnClickListener(v ->{
+                File fileToBeSent = new File(getApplicationContext().getFilesDir(),"PhoneC_14 Jan 2022 15_07_24__part1.mp4");
+                connectionManager.sendSegment(fileToBeSent.getPath());
+            }
+        );
     }
 
     public void successfulPing(String msg){
@@ -143,6 +150,9 @@ public class MainActivity extends AppCompatActivity {
 
         secondaryActionButton1.setVisibility(View.INVISIBLE);
         secondaryActionButton1.setOnClickListener(null);
+
+        secondaryActionButton2.setVisibility(View.INVISIBLE);
+        secondaryActionButton2.setOnClickListener(null);
     }
 
 
@@ -190,25 +200,4 @@ public class MainActivity extends AppCompatActivity {
         startActivityForResult(mediaProjectionManager.createScreenCaptureIntent(), REQUEST_MEDIA_PROJECTION);
     }
 
-    //getting messages from service
-    private final BroadcastReceiver messageReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String finishedFileName = intent.getStringExtra("filename");
-            connectionManager.sendSegment(finishedFileName);
-        }
-    };
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        LocalBroadcastManager.getInstance(this)
-                .registerReceiver(messageReceiver, new IntentFilter("my-message"));
-    }
-
-    @Override
-    protected void onPause() {
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(messageReceiver);
-        super.onPause();
-    }
 }

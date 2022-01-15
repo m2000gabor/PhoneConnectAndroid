@@ -25,7 +25,6 @@ public class ScreenCaptureBuilder {
     public void start(int resultCode, Intent data){
         setupMetrics();
 
-
         Intent intent = new Intent(mainActivity, ScreenCapture.class);
         intent.putExtra("resultCode",resultCode);
         intent.putExtra("data",data);
@@ -34,9 +33,10 @@ public class ScreenCaptureBuilder {
         intent.putExtra("metrics_densityDpi", this.metrics.densityDpi);
 
         //componentName = mainActivity.startService(intent); //if i dont need a new thread, use this
-        Thread thread = new Thread(() -> componentName = mainActivity.startService(intent));
+        Thread thread = new Thread(() -> {
+            componentName = mainActivity.startService(intent);
+        });
         thread.start();
-
     }
 
     public void stop(){mainActivity.stopService(new Intent().setComponent(componentName));}
