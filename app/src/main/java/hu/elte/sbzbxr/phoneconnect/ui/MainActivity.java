@@ -21,14 +21,15 @@ import java.io.File;
 
 import hu.elte.sbzbxr.phoneconnect.R;
 import hu.elte.sbzbxr.phoneconnect.controller.ScreenCaptureBuilder;
+import hu.elte.sbzbxr.phoneconnect.controller.ServiceController;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
 
 public class MainActivity extends AppCompatActivity {
     static final String TAG = "ScreenCaptureFragment";
 
-
     static final int REQUEST_MEDIA_PROJECTION = 1;
-    private ScreenCaptureBuilder screenCaptureBuilder =null;
+    //private ScreenCaptureBuilder screenCaptureBuilder =null;
+    private ServiceController serviceController;
 
     private EditText ipEditText;
     private EditText portEditText;
@@ -37,14 +38,13 @@ public class MainActivity extends AppCompatActivity {
     private Button mainActionButton;
     private Button secondaryActionButton1;
     private Button secondaryActionButton2;
-    private ConnectionManager connectionManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        connectionManager = new ConnectionManager(this);
+        serviceController = new ServiceController(this);
 
         ipEditText = (EditText) findViewById(R.id.ipAddr);
         portEditText = (EditText) findViewById(R.id.portLabel);
@@ -54,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
         secondaryActionButton1 = (Button) findViewById(R.id.secondaryActionButton1);
         secondaryActionButton2 = (Button) findViewById(R.id.secondaryActionButton2);
         //mSurfaceView =(SurfaceView) findViewById(R.id.surface);
+
 
         /**
          * @apiNote
@@ -69,8 +70,7 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(getApplicationContext(), "Entered port is not a number", Toast.LENGTH_SHORT).show();
                 System.err.println("Entered port is not a number");
             }
-
-            connectionManager.connect(ip, port);
+            serviceController.connectToServer(ip,port);
         });
 
         prefillEditTexts();
@@ -103,12 +103,11 @@ public class MainActivity extends AppCompatActivity {
         mainActionButton.setOnClickListener(v -> startStreamingClicked());
 
         secondaryActionButton1.setVisibility(View.VISIBLE);
-        secondaryActionButton1.setOnClickListener(v -> connectionManager.sendPing());
+        secondaryActionButton1.setOnClickListener(v -> serviceController.sendPing());
 
         secondaryActionButton2.setVisibility(View.VISIBLE);
         secondaryActionButton2.setOnClickListener(v ->{
-                File fileToBeSent = new File(getApplicationContext().getFilesDir(),"PhoneC_14 Jan 2022 15_07_24__part1.mp4");
-                connectionManager.sendSegment(fileToBeSent.getPath());
+            serviceController.sendOneSegment();
             }
         );
     }
@@ -145,7 +144,7 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(getApplicationContext(), "Entered port is not a number", Toast.LENGTH_SHORT).show();
                 System.err.println("Entered port is not a number");
             }
-            connectionManager.connect(ip, port);
+            serviceController.connectToServer(ip,port);
         });
 
         secondaryActionButton1.setVisibility(View.INVISIBLE);
@@ -179,8 +178,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     private void startScreenCaptureAndRecord(int resultCode, Intent data){
-        screenCaptureBuilder = new ScreenCaptureBuilder(this);
-        screenCaptureBuilder.start(resultCode,data);
+        serviceController.startScreenCapture(resultCode,data);
         screenCaptureStarted();
     }
 
@@ -190,7 +188,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void stopScreenCaptureAndRecord(){
-        screenCaptureBuilder.stop();
+        serviceController.stopScreenCapture();
         mainActionButton.setText("Start recording");
         mainActionButton.setOnClickListener(v -> startStreamingClicked());
     }
@@ -198,6 +196,18 @@ public class MainActivity extends AppCompatActivity {
     private void requestScreenCapturePermission(){
         MediaProjectionManager mediaProjectionManager = (MediaProjectionManager) this.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
         startActivityForResult(mediaProjectionManager.createScreenCaptureIntent(), REQUEST_MEDIA_PROJECTION);
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        serviceController.activityBindToConnectionManager();
+    }
+
+    @Override
+    protected void onStop() {
+        serviceController.activityUnbindFromConnectionManager();
+        super.onStop();
     }
 
 }

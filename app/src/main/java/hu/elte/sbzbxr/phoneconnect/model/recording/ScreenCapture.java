@@ -5,35 +5,42 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
+import android.os.FileObserver;
 import android.os.IBinder;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.DateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 
+import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 
 public class ScreenCapture extends Service {
-    private static final String MEDIA_RECORDER_LOG ="MediaRecorder ";
+    private static final String LOG_TAG ="MediaRecorder ";
     private static final String VIRTUAL_DISPLAY_NAME= "VD";
     MediaProjection projection;
     MediaProjectionManager mediaProjectionManager;
     MediaRecorder mediaRecorder;
     VirtualDisplay mVirtualDisplay;
+    ConnectionManager connectionManager;
 
     public ScreenCapture(){}
 
@@ -52,17 +59,16 @@ public class ScreenCapture extends Service {
         PendingIntent pendingIntent1 = PendingIntent.getActivity(this, 0, intent1, 0);
 
         Notification notification1 = new NotificationCompat.Builder(this, "ScreenRecorder")
-                .setContentTitle("yNote studios")
-                .setContentText("Filming...")
+                .setContentTitle("Screen capturing")
+                .setContentText("In progress...")
                 .setContentIntent(pendingIntent1).build();
-
 
 
         startForeground(1, notification1);
     }
 
     private void createNotificationChannel() {
-        NotificationChannel channel = new NotificationChannel("ScreenRecorder", "Foreground notification",
+        NotificationChannel channel = new NotificationChannel("ScreenRecorder", "Screen capturing",
                 NotificationManager.IMPORTANCE_DEFAULT);
         NotificationManager manager = getSystemService(NotificationManager.class);
         manager.createNotificationChannel(channel);
@@ -78,6 +84,12 @@ public class ScreenCapture extends Service {
                 intent.getIntExtra("metrics_height",-1),
                 intent.getIntExtra("metrics_densityDpi", -1)
                 );
+
+        if(!mBound){
+            Intent i = new Intent(this, ConnectionManager.class);
+            bindService(i, mConnection, Context.BIND_AUTO_CREATE);
+        }
+
         return START_STICKY;
     }
 
@@ -107,22 +119,25 @@ public class ScreenCapture extends Service {
             @Override
             public void onInfo(MediaRecorder mr, int what, int extra) {
                 if(what==MediaRecorder.MEDIA_RECORDER_INFO_MAX_FILESIZE_APPROACHING){
-                    Log.i(MEDIA_RECORDER_LOG, "Max filesize approaching");
-                }else if(what==MediaRecorder.MEDIA_RECORDER_INFO_MAX_FILESIZE_REACHED){
-                    Log.i(MEDIA_RECORDER_LOG, "Max filesize reached");
+                    Log.i(LOG_TAG, "Max filesize approaching");
                     mr.setOutputFile(getFileLocation_Continuously());
+                }else if(what==MediaRecorder.MEDIA_RECORDER_INFO_MAX_FILESIZE_REACHED){
+                    Log.i(LOG_TAG, "Max filesize reached");
+                    //Pointless to do anything here, this means the end of story
                 }else if(what==MediaRecorder.MEDIA_RECORDER_INFO_NEXT_OUTPUT_FILE_STARTED){
-                    Log.i(MEDIA_RECORDER_LOG, "Next outputfile started");
+                    Log.i(LOG_TAG, "Next outputfile started");
                     try {
-                        mr.setNextOutputFile(getFileLocation_Continuously());
+                        File newFile= getFileLocation_Continuously();
+                        mr.setNextOutputFile(newFile);
+                        //listenOnFinish( new File(getApplicationContext().getFilesDir(), oldFileName ));
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
-                    finishedFile();
+                    //finishedFile();
                 }
             }
         });
-        setRecorderProfileMP4(mediaRecorder, metrics_width, metrics_height);
+        setRecorderProfile(mediaRecorder, metrics_width, metrics_height);
 
         try {
             mediaRecorder.prepare();
@@ -146,7 +161,7 @@ public class ScreenCapture extends Service {
         }
     }
 
-    private void setRecorderProfileMP4(MediaRecorder mediaRecorder, int metrics_width, int metrics_height) {
+    private void setRecorderProfile(MediaRecorder mediaRecorder, int metrics_width, int metrics_height) {
         mediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
         CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH);
         mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
@@ -154,39 +169,123 @@ public class ScreenCapture extends Service {
         mediaRecorder.setVideoSize(metrics_width, metrics_height);
         mediaRecorder.setVideoEncodingBitRate(profile.videoBitRate);
         mediaRecorder.setVideoEncoder(profile.videoCodec);
-        //mediaRecorder.setOutputFile(getFileLocation2(".mp4"));
         mediaRecorder.setOutputFile(getFileLocation_Continuously());
 
         mediaRecorder.setMaxFileSize(10000000);
-    }
-
-
-    // Saves to: /data/user/0/hu.elte.sbzbxr.phoneconnect/files/**timeDate**.mp4
-    private @Deprecated File getFileLocation2(String fileExtension){
-        File f = new File(getApplicationContext().getFilesDir(), "testFile_"+ Calendar.getInstance().get(Calendar.DATE)+fileExtension);
-        return f;
+        //mediaRecorder.setMaxFileSize(10000000);
     }
 
 
     private int filenameCounter =0;
+    private String directoryPath;
     private String videoBaseName="";
     private String oldFileName="";
     private String newFileName="";
+    // Saves to: /data/user/0/hu.elte.sbzbxr.phoneconnect/files/**timeDate**.mp4
     private File getFileLocation_Continuously(){
         if(filenameCounter==0){
             String timestamp= DateFormat.getDateTimeInstance().format(Calendar.getInstance().getTime()).toString().replace(':','_');
-            videoBaseName="PhoneC_"+timestamp;}
+            videoBaseName="PhoneC_"+timestamp;
+            File vidDirectory = new File(getApplicationContext().getFilesDir(),videoBaseName);
+            if(vidDirectory.mkdirs()){
+                Log.d(LOG_TAG,"New directory created");
+            }else{
+                Log.e(LOG_TAG,"Cannot create new directory");
+            }
+            directoryPath=vidDirectory.getPath();
+            listenOnFinishDir(vidDirectory);
+        }
         String fileExtension= ".mp4";
         String partNum = "__part"+ filenameCounter;
         String finalFileName=videoBaseName+partNum+fileExtension;
         filenameCounter++;
         oldFileName = newFileName;
         newFileName = finalFileName;
-        return new File(getApplicationContext().getFilesDir(), finalFileName );
+        File ret =new File(directoryPath, finalFileName );
+        try {
+            if(ret.createNewFile()){
+                Log.d(LOG_TAG,"File created");
+                //listenOnFinish(ret);
+            }else{
+                Log.e(LOG_TAG,"File name already in use");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return ret;
     }
 
-    private void finishedFile(){
+    private final ArrayList<FileObserver> fileObservers= new ArrayList<>();
 
+    private void listenOnFinish(File f) {
+        FileObserver fileObserver = new FileObserver(f.getPath(),FileObserver.CLOSE_WRITE) {
+            @Override
+            public void onEvent(int event, @Nullable String path) {
+                //if(event!=2){ Log.d("FileObserver","Event on file: "+f.getName()+" event: "+event); }
+                if(event==FileObserver.CLOSE_WRITE){
+                    try {
+                        Log.d("FileObserver", "FileSize:"+Files.size(Paths.get(f.getPath())));
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
+                    connectionManager.sendSegment(f.getPath());
+                    this.stopWatching();
+                    fileObservers.remove(this);
+                }
+
+            }
+        };
+
+        fileObserver.startWatching();
+        fileObservers.add(fileObserver);
+        Log.d("FileObserver","Observer started on file: "+f.getName()+" that exists? "+ f.exists());
     }
+
+    private static FileObserver fileObserver;
+    private void listenOnFinishDir(File dir) {
+        fileObserver = new FileObserver(dir.getPath(),FileObserver.CLOSE_WRITE) {
+            @Override
+            public void onEvent(int event, @Nullable String path) {
+                //if(event!=2){ Log.d("FileObserver","Event on file: "+f.getName()+" event: "+event); }
+                if(event==FileObserver.CLOSE_WRITE){
+                    if(path==null){return;}
+                    File actualFile = new File(dir,path);
+                    try {
+                        if(Files.size(Paths.get(actualFile.getPath()))==0){return;}
+                        Log.d("FileObserver", "FileSize:"+Files.size(Paths.get(actualFile.getPath())));
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
+                    Log.d("FileObserver", "called sendSegment on :"+actualFile.getName());
+                    connectionManager.sendSegment(actualFile.getPath());
+                }
+
+            }
+        };
+        fileObserver.startWatching();
+    }
+
+
+
+    boolean mBound=false;
+    private ServiceConnection mConnection = new ServiceConnection() {
+        // Called when the connection with the service is established
+        public void onServiceConnected(ComponentName className, IBinder service) {
+            // Because we have bound to an explicit
+            // service that is running in our own process, we can
+            // cast its IBinder to a concrete class and directly access it.
+            ConnectionManager.LocalBinder binder = (ConnectionManager.LocalBinder) service;
+            connectionManager = binder.getService();
+            mBound = true;
+        }
+
+        // Called when the connection with the service disconnects unexpectedly
+        public void onServiceDisconnected(ComponentName className) {
+            Log.e("ScreenCapture", "onServiceDisconnected");
+            mBound = false;
+        }
+    };
 
 }

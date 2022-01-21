@@ -1,7 +1,13 @@
 package hu.elte.sbzbxr.phoneconnect.model.connection;
 
+import android.app.Service;
+import android.content.Intent;
+import android.os.Binder;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.Looper;
+
+import androidx.annotation.Nullable;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -12,16 +18,34 @@ import java.util.concurrent.Executors;
 
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 
-public class ConnectionManager {
+public class ConnectionManager extends Service {//todo be a foreground service
     private boolean isListening = false;
     private Socket socket;
     private PrintStream out;
     private InputStream in;
-    private final MainActivity view;
+    private MainActivity view;//todo remove this
 
-    public ConnectionManager(MainActivity mainActivity) {
-        this.view = mainActivity;
+    private final IBinder binder = new LocalBinder();
+
+    /**
+     * Class used for the client Binder.  Because we know this service always
+     * runs in the same process as its clients, we don't need to deal with IPC.
+     */
+    public class LocalBinder extends Binder {
+        public ConnectionManager getService() {
+            // Return this instance of LocalService so clients can call public methods
+            return ConnectionManager.this;
+        }
     }
+
+    @Nullable
+    @Override
+    public IBinder onBind(Intent intent) {
+        return binder;
+    }
+
+    public ConnectionManager() {}
+    public void setActivity(MainActivity mainActivity){this.view=mainActivity;}
 
     //Establish an http tcp connection
     //From: https://gist.github.com/teocci/0187ac32dcdbd57d8aaa89342be90f89

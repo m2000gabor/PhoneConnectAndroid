@@ -1,8 +1,10 @@
 package hu.elte.sbzbxr.phoneconnect.model.connection;
 
 import android.content.Intent;
+import android.os.FileObserver;
 import android.util.Log;
 
+import androidx.annotation.Nullable;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.io.BufferedInputStream;
@@ -14,10 +16,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.SocketException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.KeyStore;
 
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 
 public class FileSender extends RunnableWithHandler{
+    private static final boolean DELETE_AFTER_SENT = false;
     private static final String FILE_SENDER_LOG_TAG = "FILE_SENDER";
     private final PrintStream out;
     private final String path;
@@ -35,7 +41,6 @@ public class FileSender extends RunnableWithHandler{
         try {
             BufferedInputStream bis = new BufferedInputStream(new FileInputStream(fileToBeSent));
             int readBytes = bis.read(buffer);
-            System.out.println("Sending " + path + "(" + buffer.length + " bytes)");
             System.out.println("Sending " + path + "(" + readBytes + " bytes)");
 
             MyNetworkProtocolFrame outFrame = new MyNetworkProtocolFrame(
@@ -43,7 +48,8 @@ public class FileSender extends RunnableWithHandler{
                     getFileNameFromPath(path),buffer);
             out.write(outFrame.getAsBytes());
             out.flush();
-            Log.i(FILE_SENDER_LOG_TAG,"File successfully sent.");
+            bis.close();
+            Log.i(FILE_SENDER_LOG_TAG,"File ("+ outFrame.getDataLength()+" bytes) successfully sent.");
         } catch (FileNotFoundException e) {
             e.printStackTrace();
             Log.e(FILE_SENDER_LOG_TAG,"FileNotFound");
@@ -55,19 +61,44 @@ public class FileSender extends RunnableWithHandler{
     @Override
     void onFinished() {
         Log.i(FILE_SENDER_LOG_TAG, "File sending ended");
-        sendMessageToActivity(getFileNameFromPath(path));
-    }
-
-    private void sendMessageToActivity(String str) {
-        /*
-        Intent intent = new Intent(this.getClass(), MainActivity.class);
-        intent.putExtra("filename", str);
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
-         */
+        deleteFile(new File(path));
+        //sendMessageToActivity(getFileNameFromPath(path));
     }
 
     private String getFileNameFromPath(String path){
         String[] splittedPath = path.split("/");
         return splittedPath[splittedPath.length-1];
+    }
+
+    /**
+     * Delete file after its sent
+     */
+    private void deleteFile(File file){//todo implement properly
+        if(DELETE_AFTER_SENT) {
+            /*
+            FileObserver fileObserver = new FileObserver(file.getPath()) { //listening on wrong event type
+                @Override
+                public void onEvent(int event, @Nullable String path) {
+                    System.out.println(event);
+                    if(event==FileObserver.CLOSE_WRITE){
+                        Log.d(getClass().toString(), "Delete:"+ file.getName());
+                        if(file.delete()){
+                            Log.w(getClass().toString(),"Unable to delete file");
+                        }
+                        this.stopWatching();
+                    }
+
+                }
+            };
+            fileObserver.startWatching();
+           */
+
+            Log.d("DELETE", "Delete: "+ file.getName());
+            if(!file.delete()){
+                Log.w("DELETE","Unable to delete file");
+            }else{
+                Log.d("DELETE", "Deleted: "+ file.getName());
+            }
+        }
     }
 }

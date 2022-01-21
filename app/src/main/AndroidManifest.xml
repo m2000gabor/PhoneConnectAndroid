@@ -30,6 +30,12 @@
             android:stopWithTask="true"
             android:foregroundServiceType="mediaProjection" />
 
+        <service
+            android:name=".model.connection.ConnectionManager"
+            android:enabled="true"
+            android:exported="false"
+            android:stopWithTask="true"/>
+
     </application>
 
 </manifest>
