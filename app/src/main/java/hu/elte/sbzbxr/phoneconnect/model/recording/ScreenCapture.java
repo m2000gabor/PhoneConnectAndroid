@@ -119,7 +119,7 @@ public class ScreenCapture extends Service {
             @Override
             public void onInfo(MediaRecorder mr, int what, int extra) {
                 if(what==MediaRecorder.MEDIA_RECORDER_INFO_MAX_FILESIZE_APPROACHING){
-                    Log.i(LOG_TAG, "Max filesize approaching");
+                    Log.i(LOG_TAG, "Max filesize approaching2");
                     mr.setOutputFile(getFileLocation_Continuously());
                 }else if(what==MediaRecorder.MEDIA_RECORDER_INFO_MAX_FILESIZE_REACHED){
                     Log.i(LOG_TAG, "Max filesize reached");
