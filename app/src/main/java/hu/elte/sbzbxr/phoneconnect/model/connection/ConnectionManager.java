@@ -9,17 +9,20 @@ import android.os.Looper;
 
 import androidx.annotation.Nullable;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.Socket;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 
-public class ConnectionManager extends Service {//todo be a foreground service
+public class ConnectionManager extends Service {
     private boolean isListening = false;
+    private boolean isSending = false;
     private Socket socket;
     private PrintStream out;
     private InputStream in;
@@ -71,6 +74,7 @@ public class ConnectionManager extends Service {//todo be a foreground service
     public void disconnect(){
         try {
             isListening =false;
+            isSending =false;
             if(in==null || out==null || socket==null){return;}
             in.close();
             out.close();
@@ -96,11 +100,13 @@ public class ConnectionManager extends Service {//todo be a foreground service
             }
             System.out.println("Successful connection establishment");
             isListening =true;
+            isSending=true;
         }else{
             view.showFailMessage("Could not establish the connection!");
         }
 
         listen();
+        startSendingThread();
     }
 
     private void listen(){
@@ -133,7 +139,25 @@ public class ConnectionManager extends Service {//todo be a foreground service
         });
     }
 
+    private void startSendingThread(){
+        new Thread(() ->{
+            while(isSending){
+                try {
+                    String s = sendingQueue.take();
+                    FileSender2.send(out,s);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
+    private final ArrayBlockingQueue<String> sendingQueue = new ArrayBlockingQueue<String>(10);
+
     public void sendSegment(String path) {
-        startAsyncTask(new FileSender(out,path));
+        if(sendingQueue.add(path)){
+            System.out.println("File queued: "+path);
+        }
+        //startAsyncTask(new FileSender(out,path));
     }
 }

@@ -119,7 +119,7 @@ public class ScreenCapture extends Service {
             @Override
             public void onInfo(MediaRecorder mr, int what, int extra) {
                 if(what==MediaRecorder.MEDIA_RECORDER_INFO_MAX_FILESIZE_APPROACHING){
-                    Log.i(LOG_TAG, "Max filesize approaching3");
+                    Log.i(LOG_TAG, "Max filesize approaching");
                     //mr.setOutputFile(getFileLocation_Continuously());
                 }else if(what==MediaRecorder.MEDIA_RECORDER_INFO_MAX_FILESIZE_REACHED){
                     Log.i(LOG_TAG, "Max filesize reached");
@@ -213,33 +213,6 @@ public class ScreenCapture extends Service {
             e.printStackTrace();
         }
         return ret;
-    }
-
-    private final ArrayList<FileObserver> fileObservers= new ArrayList<>();
-
-    private void listenOnFinish(File f) {
-        FileObserver fileObserver = new FileObserver(f.getPath(),FileObserver.CLOSE_WRITE) {
-            @Override
-            public void onEvent(int event, @Nullable String path) {
-                //if(event!=2){ Log.d("FileObserver","Event on file: "+f.getName()+" event: "+event); }
-                if(event==FileObserver.CLOSE_WRITE){
-                    try {
-                        Log.d("FileObserver", "FileSize:"+Files.size(Paths.get(f.getPath())));
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-
-                    connectionManager.sendSegment(f.getPath());
-                    this.stopWatching();
-                    fileObservers.remove(this);
-                }
-
-            }
-        };
-
-        fileObserver.startWatching();
-        fileObservers.add(fileObserver);
-        Log.d("FileObserver","Observer started on file: "+f.getName()+" that exists? "+ f.exists());
     }
 
     private static FileObserver fileObserver;
