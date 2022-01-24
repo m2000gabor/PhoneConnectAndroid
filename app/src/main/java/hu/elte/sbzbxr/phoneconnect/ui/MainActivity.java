@@ -1,8 +1,10 @@
-package hu.elte.sbzbxr.phoneconnect;
+package hu.elte.sbzbxr.phoneconnect.ui;
 
 import android.app.Activity;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.media.projection.MediaProjectionManager;
 import android.os.Bundle;
 import android.util.Log;
@@ -13,16 +15,21 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import hu.elte.sbzbxr.phoneconnect.model.ConnectionManager;
-import hu.elte.sbzbxr.phoneconnect.ui.ScreenCaptureCallbacks;
+import java.io.File;
 
-public class MainActivity extends AppCompatActivity implements ScreenCaptureCallbacks {
+import hu.elte.sbzbxr.phoneconnect.R;
+import hu.elte.sbzbxr.phoneconnect.controller.ScreenCaptureBuilder;
+import hu.elte.sbzbxr.phoneconnect.controller.ServiceController;
+import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
+
+public class MainActivity extends AppCompatActivity {
     static final String TAG = "ScreenCaptureFragment";
 
-
     static final int REQUEST_MEDIA_PROJECTION = 1;
-    private ScreenCaptureBuilder screenCaptureBuilder =null;
+    //private ScreenCaptureBuilder screenCaptureBuilder =null;
+    private ServiceController serviceController;
 
     private EditText ipEditText;
     private EditText portEditText;
@@ -30,14 +37,14 @@ public class MainActivity extends AppCompatActivity implements ScreenCaptureCall
     private TextView receivedMessageLabel;
     private Button mainActionButton;
     private Button secondaryActionButton1;
-    private ConnectionManager connectionManager;
+    private Button secondaryActionButton2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        connectionManager = new ConnectionManager(this);
+        serviceController = new ServiceController(this);
 
         ipEditText = (EditText) findViewById(R.id.ipAddr);
         portEditText = (EditText) findViewById(R.id.portLabel);
@@ -45,7 +52,9 @@ public class MainActivity extends AppCompatActivity implements ScreenCaptureCall
         receivedMessageLabel = (TextView) findViewById(R.id.receivedMessageLabel);
         mainActionButton = (Button) findViewById(R.id.mainActionButton);
         secondaryActionButton1 = (Button) findViewById(R.id.secondaryActionButton1);
+        secondaryActionButton2 = (Button) findViewById(R.id.secondaryActionButton2);
         //mSurfaceView =(SurfaceView) findViewById(R.id.surface);
+
 
         /**
          * @apiNote
@@ -61,12 +70,7 @@ public class MainActivity extends AppCompatActivity implements ScreenCaptureCall
                 Toast.makeText(getApplicationContext(), "Entered port is not a number", Toast.LENGTH_SHORT).show();
                 System.err.println("Entered port is not a number");
             }
-
-            connectionManager.connect(ip, port);
-
-
-
-
+            serviceController.connectToServer(ip,port);
         });
 
         prefillEditTexts();
@@ -99,7 +103,13 @@ public class MainActivity extends AppCompatActivity implements ScreenCaptureCall
         mainActionButton.setOnClickListener(v -> startStreamingClicked());
 
         secondaryActionButton1.setVisibility(View.VISIBLE);
-        secondaryActionButton1.setOnClickListener(v -> connectionManager.ping());
+        secondaryActionButton1.setOnClickListener(v -> serviceController.sendPing());
+
+        secondaryActionButton2.setVisibility(View.VISIBLE);
+        secondaryActionButton2.setOnClickListener(v ->{
+            serviceController.sendOneSegment();
+            }
+        );
     }
 
     public void successfulPing(String msg){
@@ -134,11 +144,14 @@ public class MainActivity extends AppCompatActivity implements ScreenCaptureCall
                 Toast.makeText(getApplicationContext(), "Entered port is not a number", Toast.LENGTH_SHORT).show();
                 System.err.println("Entered port is not a number");
             }
-            connectionManager.connect(ip, port);
+            serviceController.connectToServer(ip,port);
         });
 
         secondaryActionButton1.setVisibility(View.INVISIBLE);
         secondaryActionButton1.setOnClickListener(null);
+
+        secondaryActionButton2.setVisibility(View.INVISIBLE);
+        secondaryActionButton2.setOnClickListener(null);
     }
 
 
@@ -165,8 +178,7 @@ public class MainActivity extends AppCompatActivity implements ScreenCaptureCall
 
 
     private void startScreenCaptureAndRecord(int resultCode, Intent data){
-        screenCaptureBuilder = new ScreenCaptureBuilder(this);
-        screenCaptureBuilder.start(resultCode,data);
+        serviceController.startScreenCapture(resultCode,data);
         screenCaptureStarted();
     }
 
@@ -176,7 +188,7 @@ public class MainActivity extends AppCompatActivity implements ScreenCaptureCall
     }
 
     private void stopScreenCaptureAndRecord(){
-        screenCaptureBuilder.stop();
+        serviceController.stopScreenCapture();
         mainActionButton.setText("Start recording");
         mainActionButton.setOnClickListener(v -> startStreamingClicked());
     }
@@ -185,4 +197,17 @@ public class MainActivity extends AppCompatActivity implements ScreenCaptureCall
         MediaProjectionManager mediaProjectionManager = (MediaProjectionManager) this.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
         startActivityForResult(mediaProjectionManager.createScreenCaptureIntent(), REQUEST_MEDIA_PROJECTION);
     }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        serviceController.activityBindToConnectionManager();
+    }
+
+    @Override
+    protected void onStop() {
+        serviceController.activityUnbindFromConnectionManager();
+        super.onStop();
+    }
+
 }

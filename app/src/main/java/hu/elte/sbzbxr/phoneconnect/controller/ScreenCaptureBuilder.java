@@ -1,10 +1,11 @@
-package hu.elte.sbzbxr.phoneconnect;
+package hu.elte.sbzbxr.phoneconnect.controller;
 
 import android.content.ComponentName;
 import android.content.Intent;
 import android.util.DisplayMetrics;
 
-import hu.elte.sbzbxr.phoneconnect.model.ScreenCapture;
+import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
+import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenCapture;
 
 
 public class ScreenCaptureBuilder {
@@ -12,7 +13,7 @@ public class ScreenCaptureBuilder {
     DisplayMetrics metrics;
     ComponentName componentName;
 
-    ScreenCaptureBuilder(MainActivity mainActivity){
+    public ScreenCaptureBuilder(MainActivity mainActivity){
         this.mainActivity=mainActivity;
     }
 
@@ -24,7 +25,6 @@ public class ScreenCaptureBuilder {
     public void start(int resultCode, Intent data){
         setupMetrics();
 
-
         Intent intent = new Intent(mainActivity, ScreenCapture.class);
         intent.putExtra("resultCode",resultCode);
         intent.putExtra("data",data);
@@ -33,9 +33,10 @@ public class ScreenCaptureBuilder {
         intent.putExtra("metrics_densityDpi", this.metrics.densityDpi);
 
         //componentName = mainActivity.startService(intent); //if i dont need a new thread, use this
-        Thread thread = new Thread(() -> componentName = mainActivity.startService(intent));
+        Thread thread = new Thread(() -> {
+            componentName = mainActivity.startService(intent);
+        });
         thread.start();
-
     }
 
     public void stop(){mainActivity.stopService(new Intent().setComponent(componentName));}

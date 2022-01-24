@@ -1,4 +1,4 @@
-package hu.elte.sbzbxr.phoneconnect.model;
+package hu.elte.sbzbxr.phoneconnect.model.connection;
 
 import android.os.Handler;
 
