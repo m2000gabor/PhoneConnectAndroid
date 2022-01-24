@@ -15,6 +15,7 @@ import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
+import android.os.Build;
 import android.os.FileObserver;
 import android.os.IBinder;
 import android.util.Log;
@@ -41,6 +42,8 @@ public class ScreenCapture extends Service {
     MediaRecorder mediaRecorder;
     VirtualDisplay mVirtualDisplay;
     ConnectionManager connectionManager;
+    private enum Profile{HIGH,LOW,OGG,Mpeg_2,ThreeGpp}
+    private static final Profile recordingProfile = Profile.ThreeGpp;
 
     public ScreenCapture(){}
 
@@ -163,15 +166,46 @@ public class ScreenCapture extends Service {
 
     private void setRecorderProfile(MediaRecorder mediaRecorder, int metrics_width, int metrics_height) {
         mediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
-        CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH);
-        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+        CamcorderProfile profile;
+        switch (recordingProfile){
+            case LOW:
+                profile = CamcorderProfile.get(CamcorderProfile.QUALITY_480P);
+                mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+                mediaRecorder.setMaxFileSize(3000000);
+                break;
+            case OGG:
+                profile = CamcorderProfile.get(CamcorderProfile.QUALITY_480P);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.OGG);
+                }else{
+                    mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+                }
+                mediaRecorder.setMaxFileSize(10000000);
+                break;
+            case Mpeg_2:
+                profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH);
+                mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_2_TS);
+                mediaRecorder.setMaxFileSize(10000000);
+                break;
+            case ThreeGpp:
+                profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH);
+                mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+                mediaRecorder.setMaxFileSize(10000000);
+                break;
+            default:
+                profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH);
+                mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+                mediaRecorder.setMaxFileSize(10000000);
+                break;
+        }
+
         mediaRecorder.setVideoFrameRate(profile.videoFrameRate);
         mediaRecorder.setVideoSize(metrics_width, metrics_height);
         mediaRecorder.setVideoEncodingBitRate(profile.videoBitRate);
         mediaRecorder.setVideoEncoder(profile.videoCodec);
         mediaRecorder.setOutputFile(getFileLocation_Continuously());
 
-        mediaRecorder.setMaxFileSize(10000000);
+
         //mediaRecorder.setMaxFileSize(10000000);
     }
 
@@ -184,7 +218,8 @@ public class ScreenCapture extends Service {
     // Saves to: /data/user/0/hu.elte.sbzbxr.phoneconnect/files/**timeDate**.mp4
     private File getFileLocation_Continuously(){
         if(filenameCounter==0){
-            String timestamp= DateFormat.getDateTimeInstance().format(Calendar.getInstance().getTime()).toString().replace(':','_');
+            String timestamp= DateFormat.getDateTimeInstance().format(Calendar.getInstance().getTime())
+                    .replace(':','_').replace(' ','_');
             videoBaseName="PhoneC_"+timestamp;
             File vidDirectory = new File(getApplicationContext().getFilesDir(),videoBaseName);
             if(vidDirectory.mkdirs()){
@@ -195,7 +230,7 @@ public class ScreenCapture extends Service {
             directoryPath=vidDirectory.getPath();
             listenOnFinishDir(vidDirectory);
         }
-        String fileExtension= ".mp4";
+        String fileExtension= getFileExtension();
         String partNum = "__part"+ filenameCounter;
         String finalFileName=videoBaseName+partNum+fileExtension;
         filenameCounter++;
@@ -213,6 +248,19 @@ public class ScreenCapture extends Service {
             e.printStackTrace();
         }
         return ret;
+    }
+
+    private String getFileExtension(){
+        switch (recordingProfile){
+            case OGG:
+                return ".ogg";
+            case Mpeg_2:
+                return ".m2t";
+                case ThreeGpp:
+                    return ".3gp";
+            default:
+                return ".mp4";
+        }
     }
 
     private static FileObserver fileObserver;
