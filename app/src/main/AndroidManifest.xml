@@ -31,6 +31,13 @@
             android:foregroundServiceType="mediaProjection" />
 
         <service
+            android:name=".model.recording.ScreenCapture2"
+            android:enabled="true"
+            android:exported="false"
+            android:stopWithTask="true"
+            android:foregroundServiceType="mediaProjection" />
+
+        <service
             android:name=".model.connection.ConnectionManager"
             android:enabled="true"
             android:exported="false"
