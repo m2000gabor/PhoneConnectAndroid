@@ -11,7 +11,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.graphics.Bitmap;
-import android.graphics.ImageFormat;
 import android.graphics.PixelFormat;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
@@ -19,7 +18,6 @@ import android.media.Image;
 import android.media.ImageReader;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
-import android.os.FileObserver;
 import android.os.IBinder;
 import android.util.Log;
 import android.view.Surface;
@@ -27,25 +25,21 @@ import android.view.Surface;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.nio.Buffer;
-import java.nio.ByteBuffer;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.util.Calendar;
 
+import hu.elte.sbzbxr.phoneconnect.model.ScreenShot;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 
 public class ScreenCapture2 extends Service {
-    private static final String LOG_TAG ="MediaRecorder";
+    private static final String LOG_TAG ="ScreenCapture2";
     private static final String VIRTUAL_DISPLAY_NAME= "VirtualDisplay";
     MediaProjection projection;
     MediaProjectionManager mediaProjectionManager;
     VirtualDisplay mVirtualDisplay;
+    ImageReader imageReader;
     ConnectionManager connectionManager;
 
     public ScreenCapture2(){}
@@ -101,9 +95,9 @@ public class ScreenCapture2 extends Service {
 
     @Override
     public void onDestroy() {
+        imageReader.close();
         projection.stop();
         mVirtualDisplay.release();
-
         super.onDestroy();
     }
 
@@ -111,30 +105,24 @@ public class ScreenCapture2 extends Service {
     https://stackoverflow.com/questions/5524672/is-it-possible-to-use-camcorderprofile-without-audio-source/34045905
     https://stackoverflow.com/questions/61276730/media-projections-require-a-foreground-service-of-type-serviceinfo-foreground-se
      */
+    @SuppressLint("WrongConstant")
     private void createMediaProjection(int resultCode, Intent data,
-                                       int metrics_width,int metrics_height,int metrics_densityDpi){
+                                       int metrics_width, int metrics_height, int metrics_densityDpi){
         mediaProjectionManager = (MediaProjectionManager) this.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
 
         //create media projection
         projection = mediaProjectionManager.getMediaProjection(resultCode, data);
 
-        //create screen recorder
-
         // Let MediaProjection callback use the SurfaceTextureHelper thread.
         //projection.registerCallback(mediaProjectionCallback, surfaceTextureHelper.getHandler());
 
-
-        @SuppressLint("WrongConstant")
-        ImageReader imageReader = ImageReader.newInstance(metrics_width,metrics_height, PixelFormat.RGBA_8888,10);
+        //From: https://stackoverflow.com/questions/37143968/how-to-handle-image-capture-with-mediaprojection-on-orientation-change
+        imageReader = ImageReader.newInstance(metrics_width,metrics_height, PixelFormat.RGBA_8888,50);
         imageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
             @Override
             public void onImageAvailable(ImageReader reader) {
-                Image im = reader.acquireLatestImage();
-                if(im == null){return;}
-                try {
-                    File fileLocation = getFileLocation_Continuously();
-                    FileOutputStream output = new FileOutputStream(fileLocation);
-
+                try (Image im = reader.acquireLatestImage()){
+                    if(im == null || connectionManager==null){return;}
                     Image.Plane[] planes = im.getPlanes();
                     Buffer imageBuffer = planes[0].getBuffer().rewind();
 
@@ -146,21 +134,17 @@ public class ScreenCapture2 extends Service {
                     Bitmap bitmap = Bitmap.createBitmap(metrics_width + rowPadding / pixelStride, metrics_height,
                             Bitmap.Config.ARGB_8888);
                     bitmap.copyPixelsFromBuffer(imageBuffer);
+                    im.close();
+                    imageBuffer.clear();
 
-                    bitmap.compress(Bitmap.CompressFormat.JPEG,100,output);
-
-                    output.flush();
-                    output.close();
-                    Log.d(LOG_TAG,fileLocation.getName() + " saved");
+                    connectionManager.sendScreenShot(new ScreenShot(
+                            getScreenShotName(), bitmap));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-                im.close();
             }
         },null);
         Surface virtualSurface = imageReader.getSurface();
-
-
 
         //mirroring
         mVirtualDisplay = projection.createVirtualDisplay(VIRTUAL_DISPLAY_NAME,
@@ -170,76 +154,23 @@ public class ScreenCapture2 extends Service {
     }
 
     private int filenameCounter =0;
-    private String directoryPath;
     private String fileBaseName ="";
-    private String oldFileName="";
-    private String newFileName="";
-    // Saves to: /data/user/0/hu.elte.sbzbxr.phoneconnect/files/**timeDate**.mp4
-    private File getFileLocation_Continuously(){
+    private String getScreenShotName(){
         if(filenameCounter==0){
             String timestamp= DateFormat.getDateTimeInstance().format(Calendar.getInstance().getTime())
                     .replace(':','_').replace(' ','_');
             fileBaseName ="PhoneC_"+timestamp;
-            File vidDirectory = new File(getApplicationContext().getFilesDir(), fileBaseName);
-            if(vidDirectory.mkdirs()){
-                Log.d(LOG_TAG,"New directory created");
-            }else{
-                Log.e(LOG_TAG,"Cannot create new directory");
-            }
-            directoryPath=vidDirectory.getPath();
-            listenOnFinishDir(vidDirectory);
         }
         String fileExtension= getFileExtension();
         String partNum = "__part"+ filenameCounter;
         String finalFileName= fileBaseName +partNum+fileExtension;
         filenameCounter++;
-        oldFileName = newFileName;
-        newFileName = finalFileName;
-        File ret =new File(directoryPath, finalFileName );
-        try {
-            if(ret.createNewFile()){
-                Log.d(LOG_TAG,"File created");
-                //listenOnFinish(ret);
-            }else{
-                Log.e(LOG_TAG,"File name already in use");
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return ret;
+        return finalFileName;
     }
 
     private String getFileExtension(){
         return ".jpg";
     }
-
-    private static FileObserver fileObserver;
-    private void listenOnFinishDir(File dir) {
-        /*
-        fileObserver = new FileObserver(dir.getPath(),FileObserver.CLOSE_WRITE) {
-            @Override
-            public void onEvent(int event, @Nullable String path) {
-                //if(event!=2){ Log.d("FileObserver","Event on file: "+f.getName()+" event: "+event); }
-                if(event==FileObserver.CLOSE_WRITE){
-                    if(path==null){return;}
-                    File actualFile = new File(dir,path);
-                    try {
-                        if(Files.size(Paths.get(actualFile.getPath()))==0){return;}
-                        Log.d("FileObserver", "FileSize:"+Files.size(Paths.get(actualFile.getPath())));
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-
-                    Log.d("FileObserver", "called sendSegment on :"+actualFile.getName());
-                    connectionManager.sendSegment(actualFile.getPath());
-                }
-
-
-        };
-        fileObserver.startWatching();}*/
-    }
-
-
 
     boolean mBound=false;
     private ServiceConnection mConnection = new ServiceConnection() {

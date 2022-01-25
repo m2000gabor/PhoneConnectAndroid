@@ -107,7 +107,8 @@ public class MainActivity extends AppCompatActivity {
 
         secondaryActionButton2.setVisibility(View.VISIBLE);
         secondaryActionButton2.setOnClickListener(v ->{
-            serviceController.sendOneSegment();
+            serviceController.disconnectFromServer();
+            this.afterDisconnect();
             }
         );
     }

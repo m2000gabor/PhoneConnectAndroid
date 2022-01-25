@@ -26,13 +26,14 @@ public class ServiceController {
     public void stopScreenCapture(){screenCaptureBuilder.stop();}
 
     public void connectToServer(String ip, int port){connectionManager.connect(ip,port);}
-    public void disconnectFromServer(){}
+    public void disconnectFromServer(){screenCaptureBuilder.stop();connectionManager.disconnect();}
 
     public void sendPing(){connectionManager.sendPing();}
 
+    @Deprecated
     public void sendOneSegment(){
         File fileToBeSent = new File(mainActivity.getApplicationContext().getFilesDir(),"PhoneC_14 Jan 2022 15_07_24__part1.mp4");
-        connectionManager.sendSegment(fileToBeSent.getPath());
+        connectionManager.sendFile(fileToBeSent.getPath());
     }
 
     private void initScreenCapture(){

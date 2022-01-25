@@ -9,7 +9,6 @@ import android.os.Looper;
 
 import androidx.annotation.Nullable;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
@@ -18,6 +17,8 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import hu.elte.sbzbxr.phoneconnect.model.ScreenShot;
+import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenCapture2;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 
 public class ConnectionManager extends Service {
@@ -27,6 +28,7 @@ public class ConnectionManager extends Service {
     private PrintStream out;
     private InputStream in;
     private MainActivity view;//todo remove this
+    private final ArrayBlockingQueue<ScreenShot> screenShotQueue = new ArrayBlockingQueue<ScreenShot>(10);
 
     private final IBinder binder = new LocalBinder();
 
@@ -143,8 +145,11 @@ public class ConnectionManager extends Service {
         new Thread(() ->{
             while(isSending){
                 try {
-                    String s = sendingQueue.take();
-                    FileSender2.send(out,s);
+                    ScreenShot screenShot = screenShotQueue.take();
+                    //bitmap.compress(Bitmap.CompressFormat.JPEG,100,out);
+                    //String s = sendingQueue.take();
+                    //FileSender2.send(out,s);
+                    BitMapSender.send(out,screenShot);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -152,12 +157,16 @@ public class ConnectionManager extends Service {
         }).start();
     }
 
-    private final ArrayBlockingQueue<String> sendingQueue = new ArrayBlockingQueue<String>(10);
+    @Deprecated
+    public void sendFile(String path){
+        startAsyncTask(new FileSender(out,path));
+    }
 
-    public void sendSegment(String path) {
-        if(sendingQueue.add(path)){
-            System.out.println("File queued: "+path);
+    public void sendScreenShot(ScreenShot screenShot) {
+        if(!screenShotQueue.offer(screenShot)){
+            screenShotQueue.clear();
+            screenShotQueue.offer(screenShot);
+            System.err.println("Bitmap queue overflown -> cleared");
         }
-        //startAsyncTask(new FileSender(out,path));
     }
 }

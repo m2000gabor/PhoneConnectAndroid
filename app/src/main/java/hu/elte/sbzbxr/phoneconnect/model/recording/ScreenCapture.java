@@ -280,7 +280,7 @@ public class ScreenCapture extends Service {
                     }
 
                     Log.d("FileObserver", "called sendSegment on :"+actualFile.getName());
-                    connectionManager.sendSegment(actualFile.getPath());
+                    connectionManager.sendFile(actualFile.getPath());
                 }
 
             }
