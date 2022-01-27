@@ -29,7 +29,6 @@ import java.nio.Buffer;
 import java.text.DateFormat;
 import java.util.Calendar;
 
-import hu.elte.sbzbxr.phoneconnect.model.ScreenShot;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 

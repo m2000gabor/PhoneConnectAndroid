@@ -1,10 +1,8 @@
 package hu.elte.sbzbxr.phoneconnect.ui;
 
 import android.app.Activity;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.media.projection.MediaProjectionManager;
 import android.os.Bundle;
 import android.util.Log;
@@ -15,14 +13,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-
-import java.io.File;
 
 import hu.elte.sbzbxr.phoneconnect.R;
-import hu.elte.sbzbxr.phoneconnect.controller.ScreenCaptureBuilder;
 import hu.elte.sbzbxr.phoneconnect.controller.ServiceController;
-import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
 
 public class MainActivity extends AppCompatActivity {
     static final String TAG = "ScreenCaptureFragment";
@@ -53,27 +46,8 @@ public class MainActivity extends AppCompatActivity {
         mainActionButton = (Button) findViewById(R.id.mainActionButton);
         secondaryActionButton1 = (Button) findViewById(R.id.secondaryActionButton1);
         secondaryActionButton2 = (Button) findViewById(R.id.secondaryActionButton2);
-        //mSurfaceView =(SurfaceView) findViewById(R.id.surface);
 
-
-        /**
-         * @apiNote
-         * When the connect button is clicked, check the input,
-         * and ask the ConnectionManager to establish the connection.
-         */
-        mainActionButton.setOnClickListener(v -> {
-            String ip = ipEditText.getText().toString();
-            int port = -1;
-            try {
-                port = Integer.parseInt(portEditText.getText().toString());
-            }catch (NumberFormatException e){
-                Toast.makeText(getApplicationContext(), "Entered port is not a number", Toast.LENGTH_SHORT).show();
-                System.err.println("Entered port is not a number");
-            }
-            serviceController.connectToServer(ip,port);
-        });
-
-        prefillEditTexts();
+        showDisconnectedUI();
     }
 
     private void prefillEditTexts(){
@@ -102,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
         mainActionButton.setText("Start Stream");
         mainActionButton.setOnClickListener(v -> startStreamingClicked());
 
-        secondaryActionButton1.setVisibility(View.VISIBLE);
+        secondaryActionButton1.setText("Ping");
         secondaryActionButton1.setOnClickListener(v -> serviceController.sendPing());
 
         secondaryActionButton2.setVisibility(View.VISIBLE);
@@ -111,6 +85,44 @@ public class MainActivity extends AppCompatActivity {
             this.afterDisconnect();
             }
         );
+    }
+
+    public void showDisconnectedUI(){
+        ipEditText.setVisibility(View.VISIBLE);
+        portEditText.setVisibility(View.VISIBLE);
+        prefillEditTexts();
+
+        connectedToLabel.setText("Not connected");
+        connectedToLabel.setVisibility(View.INVISIBLE);
+
+        receivedMessageLabel.setText("No message");
+        receivedMessageLabel.setVisibility(View.INVISIBLE);
+
+        //update buttons
+        mainActionButton.setText("Connect");
+        mainActionButton.setOnClickListener(v -> {
+            String ip = ipEditText.getText().toString();
+            int port = -1;
+            try {
+                port = Integer.parseInt(portEditText.getText().toString());
+            }catch (NumberFormatException e){
+                Toast.makeText(getApplicationContext(), "Entered port is not a number", Toast.LENGTH_SHORT).show();
+                System.err.println("Entered port is not a number");
+            }
+            serviceController.connectToServer(ip,port);
+        });
+
+        secondaryActionButton1.setVisibility(View.VISIBLE);
+        secondaryActionButton1.setText("Listen notifications");
+        secondaryActionButton1.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                serviceController.startNotificationListening();
+            }
+        });
+
+        secondaryActionButton2.setVisibility(View.INVISIBLE);
+        secondaryActionButton2.setOnClickListener(null);
     }
 
     public void successfulPing(String msg){
@@ -128,31 +140,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void afterDisconnect(){
-        ipEditText.setVisibility(View.VISIBLE);
-        portEditText.setVisibility(View.VISIBLE);
-        connectedToLabel.setText("Not connected");
-        connectedToLabel.setVisibility(View.INVISIBLE);
-        receivedMessageLabel.setVisibility(View.INVISIBLE);
-
-        //update buttons
-        mainActionButton.setText("Connect");
-        mainActionButton.setOnClickListener(v -> {
-            String ip = ipEditText.getText().toString();
-            int port = -1;
-            try {
-                port = Integer.parseInt(portEditText.getText().toString());
-            }catch (NumberFormatException e){
-                Toast.makeText(getApplicationContext(), "Entered port is not a number", Toast.LENGTH_SHORT).show();
-                System.err.println("Entered port is not a number");
-            }
-            serviceController.connectToServer(ip,port);
-        });
-
-        secondaryActionButton1.setVisibility(View.INVISIBLE);
-        secondaryActionButton1.setOnClickListener(null);
-
-        secondaryActionButton2.setVisibility(View.INVISIBLE);
-        secondaryActionButton2.setOnClickListener(null);
+        showDisconnectedUI();
     }
 
 
@@ -208,6 +196,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         serviceController.activityUnbindFromConnectionManager();
+        serviceController.stopNotificationListening();
         super.onStop();
     }
 

@@ -8,16 +8,17 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 
-import hu.elte.sbzbxr.phoneconnect.model.ScreenShot;
+import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenShot;
 
 public class BitMapSender{
     private static final String LOG_TAG = "FILE_SENDER";
+    private static final int JPEG_QUALITY=10;
 
     private BitMapSender() {}
 
     public static void send(PrintStream out, ScreenShot screenShot) {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(3000000);
-        screenShot.getBitmap().compress(Bitmap.CompressFormat.JPEG,50,byteArrayOutputStream);
+        screenShot.getBitmap().compress(Bitmap.CompressFormat.JPEG,JPEG_QUALITY,byteArrayOutputStream);
         try {
             MyNetworkProtocolFrame outFrame = new MyNetworkProtocolFrame(
                     MyNetworkProtocolFrame.FrameType.PROTOCOL_SEGMENT,

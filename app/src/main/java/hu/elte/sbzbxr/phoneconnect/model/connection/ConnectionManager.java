@@ -17,8 +17,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import hu.elte.sbzbxr.phoneconnect.model.ScreenShot;
-import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenCapture2;
+import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenShot;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 
 public class ConnectionManager extends Service {
