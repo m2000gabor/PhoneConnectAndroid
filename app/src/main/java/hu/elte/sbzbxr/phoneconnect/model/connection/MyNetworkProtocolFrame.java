@@ -9,12 +9,13 @@ import java.util.Optional;
 
 /**
  * @apiNote Must be the same for both Android and Windows side
- * @version 4.2
+ * @version 4.4
  */
 public class MyNetworkProtocolFrame {
     public enum FrameType{
         PROTOCOL_PING(1),
-        PROTOCOL_SEGMENT(2);
+        PROTOCOL_SEGMENT(2),
+        PROTOCOL_NOTIFICATION(3);
 
         public final byte v;
 
@@ -64,7 +65,7 @@ public class MyNetworkProtocolFrame {
             throw new IOException("Not a valid type");
         }
         type=getFrameTypeFromByte((byte) readByteAsInt);
-        System.out.println("Something read");
+        //System.out.println("Something read");
 
         //read nameLength
         nameLength=readLength(in);

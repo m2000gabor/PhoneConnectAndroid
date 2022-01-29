@@ -172,7 +172,7 @@ public class ScreenCapture2 extends Service {
     }
 
     boolean mBound=false;
-    private ServiceConnection mConnection = new ServiceConnection() {
+    private final ServiceConnection mConnection = new ServiceConnection() {
         // Called when the connection with the service is established
         public void onServiceConnected(ComponentName className, IBinder service) {
             // Because we have bound to an explicit

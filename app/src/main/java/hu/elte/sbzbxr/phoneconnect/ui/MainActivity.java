@@ -21,7 +21,6 @@ public class MainActivity extends AppCompatActivity {
     static final String TAG = "ScreenCaptureFragment";
 
     static final int REQUEST_MEDIA_PROJECTION = 1;
-    //private ScreenCaptureBuilder screenCaptureBuilder =null;
     private ServiceController serviceController;
 
     private EditText ipEditText;
@@ -51,7 +50,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void prefillEditTexts(){
-        ipEditText.setText("192.168.0.134");
+        //ipEditText.setText("192.168.0.134"); //koliban
+        ipEditText.setText("192.168.0.164"); //otthon
         portEditText.setText("5000");
     }
 
@@ -109,15 +109,19 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(getApplicationContext(), "Entered port is not a number", Toast.LENGTH_SHORT).show();
                 System.err.println("Entered port is not a number");
             }
-            serviceController.connectToServer(ip,port);
+            if(!serviceController.connectToServer(ip,port)){
+                Toast.makeText(getApplicationContext(), "Invalid ip or port", Toast.LENGTH_SHORT).show();
+                System.err.println("Invalid ip or port");
+            }
         });
 
         secondaryActionButton1.setVisibility(View.VISIBLE);
-        secondaryActionButton1.setText("Listen notifications");
+        secondaryActionButton1.setText("Send files");
         secondaryActionButton1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                serviceController.startNotificationListening();
+                //serviceController.startNotificationListening();
+                Log.e(getLocalClassName(),"Unimplemented feature");
             }
         });
 
@@ -126,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void successfulPing(String msg){
-        /**
+        /*
          * For Toasts:
          * @see https://developer.android.com/guide/topics/ui/notifiers/toasts#java
          */
@@ -196,8 +200,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         serviceController.activityUnbindFromConnectionManager();
-        serviceController.stopNotificationListening();
+        //serviceController.stopNotificationListening();
         super.onStop();
     }
-
 }

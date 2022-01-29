@@ -12,7 +12,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 
 //inspired: http://www.androidcoding.in/2020/05/12/work-manager_onetimeworkrequest/
-public class ConnectionCreator2 extends RunnableWithHandler {
+public class ConnectionCreator extends RunnableWithHandler {
     private Socket socket;
     private PrintStream out;
     private InputStream in;
@@ -22,7 +22,7 @@ public class ConnectionCreator2 extends RunnableWithHandler {
     private boolean result=false;
 
 
-    public ConnectionCreator2(PrintStream out, InputStream in, String ip, int port, ConnectionManager connectionManager) {
+    public ConnectionCreator(PrintStream out, InputStream in, String ip, int port, ConnectionManager connectionManager) {
         this.out = out;
         this.in = in;
         this.ip = ip;
