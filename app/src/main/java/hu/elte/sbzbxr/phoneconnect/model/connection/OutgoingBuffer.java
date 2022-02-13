@@ -3,6 +3,7 @@ package hu.elte.sbzbxr.phoneconnect.model.connection;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
 
+import hu.elte.sbzbxr.phoneconnect.model.SendableFile;
 import hu.elte.sbzbxr.phoneconnect.model.notification.SendableNotification;
 import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenShot;
 
@@ -10,6 +11,7 @@ public class OutgoingBuffer {
     private final AtomicReference<Sendable> nextElement = new AtomicReference<>();
     private final LinkedBlockingQueue<ScreenShot> screenShotQueue = new LinkedBlockingQueue<>(10);
     private final LinkedBlockingQueue<SendableNotification> notificationQueue = new LinkedBlockingQueue<>();
+    private final LinkedBlockingQueue<SendableFile> fileQueue = new LinkedBlockingQueue<>();
 
     public OutgoingBuffer(){}
 
@@ -36,6 +38,7 @@ public class OutgoingBuffer {
         synchronized (nextElement){
             if(nextElement.get()!=null){return;}
             Sendable next=notificationQueue.poll();
+            if(next==null){next=fileQueue.poll();}
             if(next==null){next=screenShotQueue.poll();}
             nextElement.set(next);
             nextElement.notify();
@@ -55,6 +58,11 @@ public class OutgoingBuffer {
                 System.err.println("Bitmap queue overflown -> cleared");
             }
         }
+        updateNextElement();
+    }
+
+    public void forceInsert(SendableFile sendableFile) {
+        fileQueue.add(sendableFile);
         updateNextElement();
     }
 }

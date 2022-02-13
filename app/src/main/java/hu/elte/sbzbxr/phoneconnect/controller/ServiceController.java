@@ -4,6 +4,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.net.Uri;
 import android.os.IBinder;
 
 import java.io.File;
@@ -98,4 +99,9 @@ public class ServiceController {
             stopNotificationListening();
         }
     };
+
+
+    public void sendFile(Uri uri) {
+        connectionManager.sendFile(uri);
+    }
 }

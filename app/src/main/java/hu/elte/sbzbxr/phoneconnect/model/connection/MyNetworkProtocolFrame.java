@@ -9,13 +9,14 @@ import java.util.Optional;
 
 /**
  * @apiNote Must be the same for both Android and Windows side
- * @version 4.4
+ * @version 4.5
  */
 public class MyNetworkProtocolFrame {
     public enum FrameType{
         PROTOCOL_PING(1),
         PROTOCOL_SEGMENT(2),
-        PROTOCOL_NOTIFICATION(3);
+        PROTOCOL_NOTIFICATION(3),
+        PROTOCOL_FILE(4);
 
         public final byte v;
 

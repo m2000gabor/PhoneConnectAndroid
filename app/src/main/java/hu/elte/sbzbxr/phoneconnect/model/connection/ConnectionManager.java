@@ -2,7 +2,9 @@ package hu.elte.sbzbxr.phoneconnect.model.connection;
 
 import android.app.Service;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Binder;
+import android.os.FileUtils;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -10,13 +12,16 @@ import android.util.Log;
 
 import androidx.annotation.Nullable;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.Socket;
+import java.net.URI;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import hu.elte.sbzbxr.phoneconnect.model.SendableFile;
 import hu.elte.sbzbxr.phoneconnect.model.notification.SendableNotification;
 import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenShot;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
@@ -187,6 +192,12 @@ public class ConnectionManager extends Service {
     @Deprecated
     public void sendFile(String path){
         startAsyncTask(new FileSender(out,path));
+    }
+
+    public void sendFile(Uri path){
+        //Log.e(LOG_TAG,"Unimplemented feature");
+        Log.d(LOG_TAG,"Would send: "+path.toString());
+        outgoingBuffer.forceInsert(new SendableFile(path,getContentResolver()));
     }
 
     public void sendScreenShot(ScreenShot screenShot) {
