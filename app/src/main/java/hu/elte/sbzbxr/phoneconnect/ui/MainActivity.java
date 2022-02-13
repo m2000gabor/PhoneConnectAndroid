@@ -140,6 +140,7 @@ public class MainActivity extends AppCompatActivity {
     public void startQrReaderActivity(){
         //From: https://stackoverflow.com/questions/8831050/android-how-to-read-qr-code-in-my-application
         IntentIntegrator integrator = new IntentIntegrator(MainActivity.this);
+        integrator.setCaptureActivity(QrReaderActivity.class);
         integrator.setDesiredBarcodeFormats(IntentIntegrator.ALL_CODE_TYPES);
         integrator.setPrompt("Scan");
         integrator.setCameraId(0);
@@ -196,6 +197,7 @@ public class MainActivity extends AppCompatActivity {
                     Log.v("Scan", "Scanned: "+result.getContents());
                     String[] scanned = result.getContents().split(":");
                     fillEditTexts(scanned[0],scanned[1]);
+                    mainActionButton.callOnClick();
                 }
             }
         }
