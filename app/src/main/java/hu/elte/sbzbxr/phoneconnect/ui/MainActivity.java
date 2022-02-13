@@ -14,6 +14,9 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.zxing.integration.android.IntentIntegrator;
+import com.google.zxing.integration.android.IntentResult;
+
 import hu.elte.sbzbxr.phoneconnect.R;
 import hu.elte.sbzbxr.phoneconnect.controller.ServiceController;
 
@@ -50,9 +53,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void prefillEditTexts(){
-        //ipEditText.setText("192.168.0.134"); //koliban
-        ipEditText.setText("192.168.0.164"); //otthon
-        portEditText.setText("5000");
+        fillEditTexts("192.168.0.134","5000");//bdh
+        //illEditTexts("192.168.0.164","5000");//home
+    }
+
+    private void fillEditTexts(String ip,String port){
+        ipEditText.setText(ip);
+        portEditText.setText(port);
     }
 
     /**
@@ -116,17 +123,30 @@ public class MainActivity extends AppCompatActivity {
         });
 
         secondaryActionButton1.setVisibility(View.VISIBLE);
-        secondaryActionButton1.setText("Send files");
+        secondaryActionButton1.setText("Scan QR");
         secondaryActionButton1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 //serviceController.startNotificationListening();
-                Log.e(getLocalClassName(),"Unimplemented feature");
+                //Log.e(getLocalClassName(),"Unimplemented feature");
+                startQrReaderActivity();
             }
         });
 
         secondaryActionButton2.setVisibility(View.INVISIBLE);
         secondaryActionButton2.setOnClickListener(null);
+    }
+
+    public void startQrReaderActivity(){
+        //From: https://stackoverflow.com/questions/8831050/android-how-to-read-qr-code-in-my-application
+        IntentIntegrator integrator = new IntentIntegrator(MainActivity.this);
+        integrator.setDesiredBarcodeFormats(IntentIntegrator.ALL_CODE_TYPES);
+        integrator.setPrompt("Scan");
+        integrator.setCameraId(0);
+        integrator.setBeepEnabled(false);
+        integrator.setBarcodeImageEnabled(false);
+        integrator.setOrientationLocked(true);
+        integrator.initiateScan();
     }
 
     public void successfulPing(String msg){
@@ -166,6 +186,18 @@ public class MainActivity extends AppCompatActivity {
 
             Log.i(TAG, "Starting screen capture");
             startScreenCaptureAndRecord(resultCode,data);
+        }else{
+            //qr
+            IntentResult result = IntentIntegrator.parseActivityResult(requestCode, resultCode, data);
+            if(result != null) {
+                if(result.getContents() == null) {
+                    Log.e("Scan", "Cancelled scan");
+                } else {
+                    Log.v("Scan", "Scanned: "+result.getContents());
+                    String[] scanned = result.getContents().split(":");
+                    fillEditTexts(scanned[0],scanned[1]);
+                }
+            }
         }
     }
 
