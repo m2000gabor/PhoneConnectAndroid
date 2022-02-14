@@ -8,7 +8,7 @@ Author: Gábor Mészáros
 - Display the phone's notificatons in Windows as well
 - Provide easy file transfer options
 - Backup and restore a phone's media files
-- Easy connect by QR code scanning
+- Easiy connect by QR code scanning
 
 ## Details
 This repository includes the Android side of the application pair.
