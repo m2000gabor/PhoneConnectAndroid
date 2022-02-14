@@ -4,6 +4,7 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.util.DisplayMetrics;
 
+import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenCapture2;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenCapture;
 
@@ -25,7 +26,7 @@ public class ScreenCaptureBuilder {
     public void start(int resultCode, Intent data){
         setupMetrics();
 
-        Intent intent = new Intent(mainActivity, ScreenCapture.class);
+        Intent intent = new Intent(mainActivity, ScreenCapture2.class);
         intent.putExtra("resultCode",resultCode);
         intent.putExtra("data",data);
         intent.putExtra("metrics_width", this.metrics.widthPixels);

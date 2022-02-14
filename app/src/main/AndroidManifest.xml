@@ -23,8 +23,22 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ui.QrReaderActivity"
+            android:screenOrientation="fullSensor"
+            android:stateNotNeeded="true"
+            android:theme="@style/zxing_CaptureTheme"
+            android:windowSoftInputMode="stateAlwaysHidden"></activity>
+
         <service
             android:name=".model.recording.ScreenCapture"
+            android:enabled="true"
+            android:exported="false"
+            android:stopWithTask="true"
+            android:foregroundServiceType="mediaProjection" />
+
+        <service
+            android:name=".model.recording.ScreenCapture2"
             android:enabled="true"
             android:exported="false"
             android:stopWithTask="true"
@@ -35,6 +49,23 @@
             android:enabled="true"
             android:exported="false"
             android:stopWithTask="true"/>
+
+
+        <service android:name=".model.notification.MyNotificationListenerService"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.notification.default_filter_types"
+                android:value="conversations|alerting">
+            </meta-data>
+            <meta-data
+                android:name="android.service.notification.disabled_filter_types"
+                android:value="silent|ongoing">
+            </meta-data>
+        </service>
 
     </application>
 

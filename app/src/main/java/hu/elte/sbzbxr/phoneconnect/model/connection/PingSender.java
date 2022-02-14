@@ -5,7 +5,7 @@ import android.util.Log;
 import java.io.IOException;
 import java.io.PrintStream;
 
-
+//todo transform to SendableMessage.class
 public class PingSender extends RunnableWithHandler {
     private static final String LOG_TAG= "Pinger";
     private final PrintStream out;

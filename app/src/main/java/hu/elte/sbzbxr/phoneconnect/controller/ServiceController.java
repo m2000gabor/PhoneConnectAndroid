@@ -4,19 +4,28 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.net.Uri;
 import android.os.IBinder;
 
 import java.io.File;
 
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
-import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenCapture;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 
+/**
+ * Responsible to start and stop services from mainActivity. Changes the services' lifecycle state.
+ * It's more likely to be a collection of the individual service manager classes, than
+ * an ultimate responsible for all service work class.
+ *
+ * //todo transform this class to a viewModel, to be independent form the activity lifecycle?
+ */
 public class ServiceController {
+    private static final String LOG_TAG="ServiceController";
     private final MainActivity mainActivity;
     private ConnectionManager connectionManager;
     private ScreenCaptureBuilder screenCaptureBuilder;
-    boolean mBound = false;
+    boolean connectionManagerIsBound = false;
+
 
     public ServiceController(MainActivity mainActivity) {
         this.mainActivity = mainActivity;
@@ -25,14 +34,30 @@ public class ServiceController {
     public void startScreenCapture(int resultCode, Intent data){initScreenCapture();screenCaptureBuilder.start(resultCode,data);}
     public void stopScreenCapture(){screenCaptureBuilder.stop();}
 
-    public void connectToServer(String ip, int port){connectionManager.connect(ip,port);}
-    public void disconnectFromServer(){}
+    public boolean connectToServer(String ip, int port){
+        boolean valid =validate_ip_port();
+        if(valid){connectionManager.connect(ip,port);}
+        return valid;
+    }
+
+    //todo implement
+    private boolean validate_ip_port() {
+        return true;
+    }
+
+    public void disconnectFromServer(){
+        if(screenCaptureBuilder!=null){screenCaptureBuilder.stop();}
+        connectionManager.disconnect();}
+
+    private void startNotificationListening(){NotificationManager.start(mainActivity);}
+    private void stopNotificationListening(){NotificationManager.stop(mainActivity);}
 
     public void sendPing(){connectionManager.sendPing();}
 
+    @Deprecated
     public void sendOneSegment(){
         File fileToBeSent = new File(mainActivity.getApplicationContext().getFilesDir(),"PhoneC_14 Jan 2022 15_07_24__part1.mp4");
-        connectionManager.sendSegment(fileToBeSent.getPath());
+        connectionManager.sendFile(fileToBeSent.getPath());
     }
 
     private void initScreenCapture(){
@@ -41,20 +66,21 @@ public class ServiceController {
 
 
     public void activityBindToConnectionManager(){
-        if(!mBound){
-            Intent intent = new Intent(mainActivity, ConnectionManager.class);
-            mainActivity.bindService(intent, connection, Context.BIND_AUTO_CREATE);
+        Intent intent = new Intent(mainActivity, ConnectionManager.class);
+        if(connectionManager==null){mainActivity.startService(intent);}//if this is the first call, we need to start the service
+        if(!connectionManagerIsBound){
+            mainActivity.bindService(intent, networkServiceConnection, Context.BIND_IMPORTANT);
         }
     }
 
     public void activityUnbindFromConnectionManager(){
-        if(mBound && connectionManager!=null){
-            mainActivity.unbindService(connection);
-            mBound = false;
+        if(connectionManagerIsBound && connectionManager!=null){
+            mainActivity.unbindService(networkServiceConnection);
+            connectionManagerIsBound = false;
         }
     }
 
-    private ServiceConnection connection = new ServiceConnection() {
+    private final ServiceConnection networkServiceConnection = new ServiceConnection() {
 
         @Override
         public void onServiceConnected(ComponentName className,
@@ -63,12 +89,19 @@ public class ServiceController {
             ConnectionManager.LocalBinder binder = (ConnectionManager.LocalBinder) service;
             connectionManager = binder.getService();
             connectionManager.setActivity(mainActivity);
-            mBound = true;
+            connectionManagerIsBound = true;
+            startNotificationListening();
         }
 
         @Override
         public void onServiceDisconnected(ComponentName arg0) {
-            mBound = false;
+            connectionManagerIsBound = false;
+            stopNotificationListening();
         }
     };
+
+
+    public void sendFile(Uri uri) {
+        connectionManager.sendFile(uri);
+    }
 }

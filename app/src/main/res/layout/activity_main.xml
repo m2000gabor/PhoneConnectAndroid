@@ -31,12 +31,11 @@
         android:id="@+id/mainActionButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="112dp"
         android:text="Connect"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/portLabel"
-        app:layout_constraintVertical_bias="0.522" />
+        app:layout_constraintRight_toRightOf="parent" />
 
     <androidx.constraintlayout.widget.Group
         android:id="@+id/group"
@@ -88,13 +87,12 @@
         android:id="@+id/secondaryActionButton1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Ping"
-        android:visibility="invisible"
+        android:text="Not set"
+        android:visibility="visible"
         app:layout_constraintBottom_toTopOf="@+id/mainActionButton"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/portLabel"
-        app:layout_constraintVertical_bias="0.755" />
+        app:layout_constraintTop_toBottomOf="@+id/secondaryActionButton3" />
 
     <TextView
         android:id="@+id/receivedMessageLabel"
@@ -104,7 +102,7 @@
         android:text=""
         android:visibility="invisible"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.498"
+        app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/connectedTo" />
 
@@ -113,11 +111,22 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
+        android:text="Disconnect"
         android:visibility="invisible"
-        android:text="Send file"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/mainActionButton" />
+
+    <Button
+        android:id="@+id/secondaryActionButton3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="Send files"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/portLabel" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

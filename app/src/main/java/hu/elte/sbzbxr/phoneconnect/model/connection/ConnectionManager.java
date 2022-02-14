@@ -2,36 +2,49 @@ package hu.elte.sbzbxr.phoneconnect.model.connection;
 
 import android.app.Service;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Binder;
+import android.os.FileUtils;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.util.Log;
 
 import androidx.annotation.Nullable;
 
-import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.Socket;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.net.URI;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import hu.elte.sbzbxr.phoneconnect.model.SendableFile;
+import hu.elte.sbzbxr.phoneconnect.model.notification.SendableNotification;
+import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenShot;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 
+/**
+ * All connection related action starts from here.
+ * Manages the different types of outgoing and ingoing requests.
+ * Establish and destroy the connection with the Windows side server app.
+ */
 public class ConnectionManager extends Service {
+    private static final String LOG_TAG = "ConnectionManager";
     private boolean isListening = false;
     private boolean isSending = false;
     private Socket socket;
     private PrintStream out;
     private InputStream in;
     private MainActivity view;//todo remove this
+    private final OutgoingBuffer outgoingBuffer=new OutgoingBuffer();
 
     private final IBinder binder = new LocalBinder();
 
     /**
-     * Class used for the client Binder.  Because we know this service always
+     * Class used for the client Binder. Because we know this service always
      * runs in the same process as its clients, we don't need to deal with IPC.
      */
     public class LocalBinder extends Binder {
@@ -47,18 +60,25 @@ public class ConnectionManager extends Service {
         return binder;
     }
 
+    //Empty ctor is required for a Service.
     public ConnectionManager() {}
+
     public void setActivity(MainActivity mainActivity){this.view=mainActivity;}
 
-    //Establish an http tcp connection
+
+    //
     //From: https://gist.github.com/teocci/0187ac32dcdbd57d8aaa89342be90f89
+
+    /**
+     * Asynchronously establish a tcp connection with the given server
+     */
     public void connect(String ip, int port) {
         if (ip.equals("") || port == -1) {
             System.err.println("Invalid parameters");
             return;
         }
         // Connect to the server
-        startAsyncTask(new ConnectionCreator2(out,in,ip,port,this));
+        startAsyncTask(new ConnectionCreator(out,in,ip,port,this));
     }
 
     //From: https://www.simplifiedcoding.net/android-asynctask/
@@ -89,6 +109,9 @@ public class ConnectionManager extends Service {
         startAsyncTask(new PingSender(out, this));
     }
 
+    /**
+     * Invoked when a connection asynchronously established
+     */
     void connectRequestFinished(boolean successful,Socket s, String ip, int port, InputStream i, PrintStream o){
         socket=s;
         in=i;
@@ -101,14 +124,16 @@ public class ConnectionManager extends Service {
             System.out.println("Successful connection establishment");
             isListening =true;
             isSending=true;
+            listen();
+            startSendingThread();
         }else{
             view.showFailMessage("Could not establish the connection!");
         }
-
-        listen();
-        startSendingThread();
     }
 
+    /**
+     * Starts a new Thread, which listens the input side of the socket
+     */
     private void listen(){
         new Thread(() -> {
             while (isListening) {
@@ -142,22 +167,40 @@ public class ConnectionManager extends Service {
     private void startSendingThread(){
         new Thread(() ->{
             while(isSending){
-                try {
-                    String s = sendingQueue.take();
-                    FileSender2.send(out,s);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                Sendable sendable = outgoingBuffer.take();
+                if(sendable!=null){MyFrameSender.send(out,sendable);
+                }else{
+                    Log.d(LOG_TAG,"Got null from buffer");
                 }
             }
         }).start();
     }
 
-    private final ArrayBlockingQueue<String> sendingQueue = new ArrayBlockingQueue<String>(10);
-
-    public void sendSegment(String path) {
-        if(sendingQueue.add(path)){
-            System.out.println("File queued: "+path);
+    public void sendNotification(SendableNotification n) {
+        if(n != null){
+            try{
+                outgoingBuffer.forceInsert(n);
+                Log.d(LOG_TAG,"Notification queued");
+            }catch(IllegalStateException e){
+                Log.e(LOG_TAG,"The notification queue is full. Cannot add latest notification.");
+            }
+        }else{
+            Log.d(LOG_TAG,"Cannot send >>null<< notification");
         }
-        //startAsyncTask(new FileSender(out,path));
+    }
+
+    @Deprecated
+    public void sendFile(String path){
+        startAsyncTask(new FileSender(out,path));
+    }
+
+    public void sendFile(Uri path){
+        //Log.e(LOG_TAG,"Unimplemented feature");
+        Log.d(LOG_TAG,"Would send: "+path.toString());
+        outgoingBuffer.forceInsert(new SendableFile(path,getContentResolver()));
+    }
+
+    public void sendScreenShot(ScreenShot screenShot) {
+        outgoingBuffer.forceInsert(screenShot);
     }
 }
