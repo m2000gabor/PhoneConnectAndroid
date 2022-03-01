@@ -195,9 +195,8 @@ public class ConnectionManager extends Service {
     }
 
     public void sendFile(Uri path){
-        //Log.e(LOG_TAG,"Unimplemented feature");
         Log.d(LOG_TAG,"Would send: "+path.toString());
-        outgoingBuffer.forceInsert(new SendableFile(path,getContentResolver()));
+        new Thread(() -> outgoingBuffer.forceInsert(new FileCutter(path,getContentResolver()))).start();
     }
 
     public void sendScreenShot(ScreenShot screenShot) {

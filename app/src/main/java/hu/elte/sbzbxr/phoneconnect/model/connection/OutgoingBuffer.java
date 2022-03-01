@@ -11,7 +11,7 @@ public class OutgoingBuffer {
     private final AtomicReference<Sendable> nextElement = new AtomicReference<>();
     private final LinkedBlockingQueue<ScreenShot> screenShotQueue = new LinkedBlockingQueue<>(10);
     private final LinkedBlockingQueue<SendableNotification> notificationQueue = new LinkedBlockingQueue<>();
-    private final LinkedBlockingQueue<SendableFile> fileQueue = new LinkedBlockingQueue<>();
+    private final LinkedBlockingQueue<SendableFile> fileQueue = new LinkedBlockingQueue<>(10);
 
     public OutgoingBuffer(){}
 
@@ -61,8 +61,14 @@ public class OutgoingBuffer {
         updateNextElement();
     }
 
-    public void forceInsert(SendableFile sendableFile) {
-        fileQueue.add(sendableFile);
-        updateNextElement();
+    public void forceInsert(FileCutter cutter) {
+        while (!cutter.isEnd()){
+            try {
+                fileQueue.put(cutter.nextFileFrame());
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            updateNextElement();
+        }
     }
 }

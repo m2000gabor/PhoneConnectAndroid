@@ -1,27 +1,15 @@
 package hu.elte.sbzbxr.phoneconnect.model.connection;
 
-import android.content.Intent;
-import android.os.FileObserver;
 import android.util.Log;
 
-import androidx.annotation.Nullable;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-
 import java.io.BufferedInputStream;
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.PrintStream;
-import java.net.SocketException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.security.KeyStore;
 
-import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
-
+@Deprecated
 public class FileSender extends RunnableWithHandler{
     private static final boolean DELETE_AFTER_SENT = false;
     private static final String FILE_SENDER_LOG_TAG = "FILE_SENDER";
