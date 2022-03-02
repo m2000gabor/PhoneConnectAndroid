@@ -1,30 +1,32 @@
 package hu.elte.sbzbxr.phoneconnect.model.connection;
 
+import static hu.elte.sbzbxr.phoneconnect.ui.PickLocationActivity.FILENAME_TO_CREATE;
+
 import android.app.Service;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Binder;
-import android.os.FileUtils;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.Socket;
-import java.net.URI;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import hu.elte.sbzbxr.phoneconnect.model.SendableFile;
 import hu.elte.sbzbxr.phoneconnect.model.notification.SendableNotification;
 import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenShot;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
+import hu.elte.sbzbxr.phoneconnect.ui.PickLocationActivity;
 
 /**
  * All connection related action starts from here.
@@ -65,6 +67,19 @@ public class ConnectionManager extends Service {
 
     public void setActivity(MainActivity mainActivity){this.view=mainActivity;}
 
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        try{
+            Uri uri = (Uri) intent.getParcelableExtra(PickLocationActivity.URI_OF_FILE);
+            String filename = intent.getStringExtra(FILENAME_TO_CREATE);
+            if(uri !=null){
+                openOutputStream(filename,uri);
+            }
+        }catch (ClassCastException e){
+            Log.d(LOG_TAG,"not a Uri");
+        }
+        return super.onStartCommand(intent, flags, startId);
+    }
 
     //
     //From: https://gist.github.com/teocci/0187ac32dcdbd57d8aaa89342be90f89
@@ -141,6 +156,7 @@ public class ConnectionManager extends Service {
                     MyNetworkProtocolFrame frame = MyNetworkProtocolFrame.inputStreamToFrame(in);
                     switch (frame.getType()) {
                         case PROTOCOL_PING: pingRequestFinished(true,frame );break;
+                        case PROTOCOL_FILE: fileArrived(frame);break;
                         default: throw new RuntimeException("Unhandled type");
                     }
                 } catch (IOException e) {
@@ -150,6 +166,51 @@ public class ConnectionManager extends Service {
             }
         }).start();
     }
+
+    private final FileOutputStreamProvider streamProvider = new FileOutputStreamProvider();
+    private void fileArrived(MyNetworkProtocolFrame frame){
+        String name = frame.getName();
+        if(name==null) {
+            Log.e(LOG_TAG,"This frame doesn't have a name");
+            return;
+        }
+        OutputStream os = streamProvider.getOutputStream(this, name);
+        if(frame.getDataLength()==0){
+            final String tmp = frame.getName();
+            Log.d(LOG_TAG,"File arrived: "+tmp);
+            view.runOnUiThread(()-> Toast.makeText(getApplicationContext(),"File arrived: "+tmp,Toast.LENGTH_SHORT).show());
+            streamProvider.endOfFileStreaming(name);
+        }else{
+            writeThisFrame(os,frame);
+        }
+    }
+
+    private static void writeThisFrame(OutputStream os, MyNetworkProtocolFrame frame){
+        try {
+            os.write(frame.getData());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void askForSaveLocation(String filename){
+        Intent intent = new Intent();
+        intent.setClass(getApplicationContext(), PickLocationActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.putExtra(FILENAME_TO_CREATE,filename);
+        startActivity(intent);
+    }
+
+    private void openOutputStream(String filename, Uri uri){
+        try {
+            OutputStream fileSavingOutputStream = getContentResolver().openOutputStream(uri,"w");
+            streamProvider.onStreamCreated(filename,fileSavingOutputStream);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+            Log.e("PickLocationActivity","No access to this location; cannot save the file");
+        }
+    }
+
 
     void pingRequestFinished(boolean successful, MyNetworkProtocolFrame frame){
         view.runOnUiThread(() -> {

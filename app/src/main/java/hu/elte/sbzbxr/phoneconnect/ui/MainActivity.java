@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.storage.StorageManager;
 import android.provider.DocumentsContract;
 import android.util.Log;
 import android.view.View;
@@ -19,13 +21,18 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
+import java.io.FileNotFoundException;
+import java.io.OutputStream;
+import java.util.concurrent.Executors;
+
 import hu.elte.sbzbxr.phoneconnect.R;
 import hu.elte.sbzbxr.phoneconnect.controller.ServiceController;
 
 public class MainActivity extends AppCompatActivity {
-    static final String TAG = "ScreenCaptureFragment";
+    private static final String TAG = "ScreenCaptureFragment";
+    private static final int REQUEST_MEDIA_PROJECTION = 1;
+    private static final int REQUEST_FILE_PICKER = 2;
 
-    static final int REQUEST_MEDIA_PROJECTION = 1;
     private ServiceController serviceController;
 
     private EditText ipEditText;
@@ -106,8 +113,6 @@ public class MainActivity extends AppCompatActivity {
         );
     }
 
-
-    private static final int PICK_FILE = 2;
     public void showFilePickerDialog(){
         //From: https://developer.android.com/training/data-storage/shared/documents-files
         // Request code for selecting a PDF document.
@@ -120,7 +125,7 @@ public class MainActivity extends AppCompatActivity {
             // system file picker when it loads.
             //intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, pickerInitialUri);
 
-            startActivityForResult(intent, PICK_FILE);
+            startActivityForResult(intent, REQUEST_FILE_PICKER);
     }
 
     public void showDisconnectedUI(){
@@ -219,7 +224,7 @@ public class MainActivity extends AppCompatActivity {
 
             Log.i(TAG, "Starting screen capture");
             startScreenCaptureAndRecord(resultCode,data);
-        }else if(requestCode==PICK_FILE && resultCode==Activity.RESULT_OK){
+        }else if(requestCode== REQUEST_FILE_PICKER && resultCode==Activity.RESULT_OK){
             // The result data contains a URI for the document or directory that
             // the user selected.
             Uri uri = null;

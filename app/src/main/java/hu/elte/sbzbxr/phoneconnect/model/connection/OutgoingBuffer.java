@@ -64,7 +64,8 @@ public class OutgoingBuffer {
     public void forceInsert(FileCutter cutter) {
         while (!cutter.isEnd()){
             try {
-                fileQueue.put(cutter.nextFileFrame());
+                fileQueue.put(cutter.current());
+                cutter.next();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
