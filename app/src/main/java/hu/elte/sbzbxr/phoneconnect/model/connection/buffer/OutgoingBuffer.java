@@ -1,7 +1,5 @@
 package hu.elte.sbzbxr.phoneconnect.model.connection.buffer;
 
-import static hu.elte.sbzbxr.phoneconnect.model.connection.buffer.BufferReducerAlgorithms.removeEvenIndices;
-
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -64,8 +62,8 @@ public class OutgoingBuffer {
     }
 
     private static void onBufferIsFull(LinkedBlockingQueue<ScreenShot> queue,ScreenShot toInsert){
-        removeEvenIndices(queue,toInsert);
-        //clearQueue(queue, toInsert);
+        //BufferReducerAlgorithms.removeEvenIndices(queue,toInsert);
+        BufferReducerAlgorithms.clearQueue(queue, toInsert);
     }
 
 

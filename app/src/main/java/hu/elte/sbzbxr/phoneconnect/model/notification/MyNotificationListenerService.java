@@ -72,8 +72,7 @@ public class MyNotificationListenerService extends NotificationListenerService {
     public void onListenerConnected() {
         Log.v(LOG_TAG,"NotificationListener connected");
         super.onListenerConnected();
-        Toast.makeText(getApplicationContext(), "NotificationListener connected", Toast.LENGTH_SHORT).show();
-
+        //Toast.makeText(getApplicationContext(), "NotificationListener connected", Toast.LENGTH_SHORT).show();
         if(!mBound){
             Intent i = new Intent(this, ConnectionManager.class);
             bindService(i, mConnection, Context.BIND_AUTO_CREATE);
