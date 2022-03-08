@@ -16,7 +16,7 @@ public class MyFrameSender {
             MyNetworkProtocolFrame outFrame = sendable.toFrame();
             out.write(outFrame.getAsBytes());
             out.flush();
-            Log.i(LOG_TAG, outFrame.getName()+" ("+sendable.getTypeName()+" ,"+ outFrame.getDataLength()+" bytes) successfully sent.");
+            Log.i(LOG_TAG, outFrame.getName()+" ( "+sendable.getTypeName()+", "+ outFrame.getDataLength()+" bytes) successfully sent.");
         } catch (FileNotFoundException e) {
             e.printStackTrace();
             Log.e(LOG_TAG,"FileNotFound");

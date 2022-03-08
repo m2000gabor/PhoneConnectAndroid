@@ -1,9 +1,13 @@
-package hu.elte.sbzbxr.phoneconnect.model.connection;
+package hu.elte.sbzbxr.phoneconnect.model.connection.buffer;
+
+import static hu.elte.sbzbxr.phoneconnect.model.connection.buffer.BufferReducerAlgorithms.removeEvenIndices;
 
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
 
 import hu.elte.sbzbxr.phoneconnect.model.SendableFile;
+import hu.elte.sbzbxr.phoneconnect.model.connection.FileCutter;
+import hu.elte.sbzbxr.phoneconnect.model.connection.Sendable;
 import hu.elte.sbzbxr.phoneconnect.model.notification.SendableNotification;
 import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenShot;
 
@@ -53,13 +57,18 @@ public class OutgoingBuffer {
     public void forceInsert(ScreenShot screenShot){
         synchronized (screenShotQueue){
             if(!screenShotQueue.offer(screenShot)){
-                screenShotQueue.clear();
-                screenShotQueue.offer(screenShot);
-                System.err.println("Bitmap queue overflown -> cleared");
+                onBufferIsFull(screenShotQueue,screenShot);
             }
         }
         updateNextElement();
     }
+
+    private static void onBufferIsFull(LinkedBlockingQueue<ScreenShot> queue,ScreenShot toInsert){
+        removeEvenIndices(queue,toInsert);
+        //clearQueue(queue, toInsert);
+    }
+
+
 
     public void forceInsert(FileCutter cutter) {
         while (!cutter.isEnd()){
