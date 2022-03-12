@@ -47,7 +47,8 @@ public class ServiceController {
 
     public void disconnectFromServer(){
         if(screenCaptureBuilder!=null){screenCaptureBuilder.stop();}
-        connectionManager.disconnect();}
+        connectionManager.disconnect();
+    }
 
     private void startNotificationListening(){NotificationManager.start(mainActivity);}
     private void stopNotificationListening(){NotificationManager.stop(mainActivity);}

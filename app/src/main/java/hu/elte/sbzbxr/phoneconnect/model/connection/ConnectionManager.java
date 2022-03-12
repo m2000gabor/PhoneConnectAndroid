@@ -115,6 +115,7 @@ public class ConnectionManager extends Service {
             in.close();
             out.close();
             socket.close();
+            view.afterDisconnect();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -133,7 +134,7 @@ public class ConnectionManager extends Service {
         in=i;
         out=o;
         if(successful){
-            view.showConnectedUI(ip,port);
+            view.connectedTo(ip,port);
             if (out == null) {
                 System.err.println("But its null!!");
             }
