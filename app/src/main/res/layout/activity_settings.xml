@@ -4,52 +4,26 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ui.MainActivity">
+    tools:context=".ui.SettingsActivity">
 
     <TextView
-        android:id="@+id/settingsLabel"
+        android:id="@+id/labelSettings"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Settings"
+        style="@style/TextAppearance.MaterialComponents.Headline2"
+        android:layout_margin="16dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        android:layout_marginTop="26sp"
-        android:textSize="36sp"
-        />
+        app:layout_constraintTop_toTopOf="parent" />
 
-    <TextView
-        android:id="@+id/textView5"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="60dp"
-        android:text="Select which notification to send"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.498"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/settingsLabel" />
-
-    <com.google.android.material.switchmaterial.SwitchMaterial
-        android:id="@+id/demoSourceSwitch"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="60dp"
-        android:text="Use demo video source"
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/settings_fragment_container"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textView5" />
-
-    <com.google.android.material.switchmaterial.SwitchMaterial
-        android:id="@+id/Display"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="68dp"
-        android:text="Display streaming metrics"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/demoSourceSwitch" />
-
-
-
+        app:layout_constraintTop_toBottomOf="@+id/labelSettings" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

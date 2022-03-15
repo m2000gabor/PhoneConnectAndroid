@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <SwitchPreferenceCompat
+        app:key="connectionType"
+        app:title="Use different connection type"/>
+
+    <Preference
+        app:key="notification"
+        app:title="Select notification to send"
+        app:summary="Report technical issues or suggest new features"/>
+
+    <SeekBarPreference
+        app:key="networkSpeed"
+        app:title="Limit network speed"
+        app:min="0"
+        app:defaultValue="100"
+        app:showSeekBarValue="true"
+        />
+
+</PreferenceScreen>

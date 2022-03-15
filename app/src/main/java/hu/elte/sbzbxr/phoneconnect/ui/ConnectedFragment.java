@@ -10,6 +10,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CompoundButton;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -48,22 +49,14 @@ public class ConnectedFragment extends Fragment {
 
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        if(savedInstanceState!=null){
-            String ip = savedInstanceState.getString(MainActivity.IP_ADDRESS);
-            String port = savedInstanceState.getString(MainActivity.PORT);
+        Bundle bundle = getArguments();
+        if(bundle!=null){
+            String ip = bundle.getString(MainActivity.IP_ADDRESS);
+            String port = bundle.getString(MainActivity.PORT);
             showConnectedUI(ip,port);
         }else{
             showConnectedUI(null,null);
         }
-
-        /*
-        binding.buttonFirst.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                NavHostFragment.findNavController(ConnectedFragment.this)
-                        .navigate(R.id.action_FirstFragment_to_SecondFragment);
-            }
-        });*/
     }
 
     @Override
@@ -79,6 +72,7 @@ public class ConnectedFragment extends Fragment {
             if (resultCode != Activity.RESULT_OK) {
                 Log.i(TAG, "User cancelled");
                 Toast.makeText(getContext(), "User cancelled", Toast.LENGTH_SHORT).show();
+                binding.includedScreenSharePanel.screenShareSwitch.setChecked(false);
                 return;
             }
 
@@ -112,7 +106,17 @@ public class ConnectedFragment extends Fragment {
         binding.pingButton.setOnClickListener(v -> activityCallback.getServiceController().sendPing());
 
 
-        binding.streamActionButton.setOnClickListener(v -> startStreamingClicked());
+        //Setup processes
+        binding.includedScreenSharePanel.screenShareSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if(isChecked){
+                    startStreamingClicked();
+                }else{
+                    stopScreenCaptureAndRecord();
+                }
+            }
+        });
 
         binding.disconnectButton.setOnClickListener(v -> activityCallback.getServiceController().disconnectFromServer());
     }
@@ -145,17 +149,9 @@ public class ConnectedFragment extends Fragment {
 
     private void startScreenCaptureAndRecord(int resultCode, Intent data){
         activityCallback.getServiceController().startScreenCapture(resultCode,data);
-        screenCaptureStarted();
-    }
-
-    private void screenCaptureStarted(){
-        binding.streamActionButton.setText("Stop recording");
-        binding.streamActionButton.setOnClickListener(v -> stopScreenCaptureAndRecord());
     }
 
     private void stopScreenCaptureAndRecord(){
         activityCallback.getServiceController().stopScreenCapture();
-        binding.streamActionButton.setText("Start recording");
-        binding.streamActionButton.setOnClickListener(v -> startStreamingClicked());
     }
 }
