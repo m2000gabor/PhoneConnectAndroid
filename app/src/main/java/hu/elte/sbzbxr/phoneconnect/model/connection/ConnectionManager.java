@@ -23,6 +23,7 @@ import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.connection.buffer.OutgoingBuffer;
 import hu.elte.sbzbxr.phoneconnect.model.notification.SendableNotification;
 import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenShot;
@@ -257,9 +258,9 @@ public class ConnectionManager extends Service {
         startAsyncTask(new FileSender(out,path));
     }
 
-    public void sendFile(Uri path){
-        Log.d(LOG_TAG,"Would send: "+path.toString());
-        new Thread(() -> outgoingBuffer.forceInsert(new FileCutter(path,getContentResolver()))).start();
+    public void sendFile(MyFileDescriptor myFileDescriptor){
+        Log.d(LOG_TAG,"Would send the following file: "+ myFileDescriptor.filename);
+        new Thread(() -> outgoingBuffer.forceInsert(new FileCutter(myFileDescriptor,getContentResolver()))).start();
     }
 
     public void sendScreenShot(ScreenShot screenShot) {

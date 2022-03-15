@@ -9,6 +9,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.Toast;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.FragmentManager;
@@ -53,7 +54,6 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
         //own logic
         serviceController = new ServiceController(this);
     }
-
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {

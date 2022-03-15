@@ -1,29 +1,32 @@
 package hu.elte.sbzbxr.phoneconnect.model.connection;
 
 import android.content.ContentResolver;
+import android.content.Context;
 import android.net.Uri;
+import android.webkit.MimeTypeMap;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
+import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.SendableFile;
 
 //version: 1.1
 public class FileCutter {
     private static final int FILE_FRAME_MAX_SIZE=32000;//in bytes
     private final InputStream inputStream;
-    private final String path;
+    private final String filename;
     private boolean isClosingPart=false;
     private boolean isEnd=false;
     private SendableFile current;
 
-    public FileCutter(Uri uri, ContentResolver contentResolver){
+    public FileCutter(MyFileDescriptor myFileDescriptor, ContentResolver contentResolver){
         InputStream inputStream1;
-        String[] strings =uri.getPath().split("/");
-        this.path=strings[strings.length-1];
+        filename = myFileDescriptor.filename;// + "." + myFileDescriptor.fileExtension;
         try  {
-            inputStream1 = contentResolver.openInputStream(uri);
+            inputStream1 = contentResolver.openInputStream(myFileDescriptor.uri);
         } catch (IOException e) {
             inputStream1 =null;
             e.printStackTrace();
@@ -56,7 +59,7 @@ public class FileCutter {
                     read = inputStream.read();
                 }
                 if(read>=0){byteArrayOutputStream.write(read);}
-                current = new SendableFile(path,byteArrayOutputStream.toByteArray());
+                current = new SendableFile(filename,byteArrayOutputStream.toByteArray());
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -69,6 +72,6 @@ public class FileCutter {
     }
 
     private SendableFile getEndOfFileFrame(){
-        return new SendableFile(path,new byte[0]);
+        return new SendableFile(filename,new byte[0]);
     }
 }

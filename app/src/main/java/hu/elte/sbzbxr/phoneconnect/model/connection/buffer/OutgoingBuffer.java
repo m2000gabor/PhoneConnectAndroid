@@ -48,8 +48,10 @@ public class OutgoingBuffer {
     }
 
     public void forceInsert(SendableNotification notification){
-        notificationQueue.add(notification);
-        updateNextElement();
+        synchronized (notificationQueue){
+            notificationQueue.add(notification);
+            updateNextElement();
+        }
     }
 
     public void forceInsert(ScreenShot screenShot){
@@ -69,14 +71,16 @@ public class OutgoingBuffer {
 
 
     public void forceInsert(FileCutter cutter) {
-        while (!cutter.isEnd()){
-            try {
-                fileQueue.put(cutter.current());
-                cutter.next();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+        synchronized (fileQueue){
+            while (!cutter.isEnd()){
+                try {
+                    fileQueue.put(cutter.current());
+                    cutter.next();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                updateNextElement();
             }
-            updateNextElement();
         }
     }
 }
