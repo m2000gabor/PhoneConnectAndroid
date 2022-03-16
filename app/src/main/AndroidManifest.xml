@@ -42,12 +42,6 @@
             android:stateNotNeeded="true" />
 
         <service
-            android:name=".model.recording.ScreenCapture"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="mediaProjection"
-            android:stopWithTask="true" />
-        <service
             android:name=".model.recording.ScreenCapture2"
             android:enabled="true"
             android:exported="false"

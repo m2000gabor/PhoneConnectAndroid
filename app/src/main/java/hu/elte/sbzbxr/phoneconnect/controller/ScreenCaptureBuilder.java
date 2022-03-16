@@ -6,7 +6,6 @@ import android.util.DisplayMetrics;
 
 import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenCapture2;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
-import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenCapture;
 
 
 public class ScreenCaptureBuilder {

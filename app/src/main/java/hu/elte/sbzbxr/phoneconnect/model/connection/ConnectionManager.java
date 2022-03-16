@@ -263,10 +263,6 @@ public class ConnectionManager extends Service {
         }
     }
 
-    @Deprecated
-    public void sendFile(String path){
-        startAsyncTask(new FileSender(out,path));
-    }
 
     public void sendFile(MyFileDescriptor myFileDescriptor){
         Log.d(LOG_TAG,"Would send the following file: "+ myFileDescriptor.filename);

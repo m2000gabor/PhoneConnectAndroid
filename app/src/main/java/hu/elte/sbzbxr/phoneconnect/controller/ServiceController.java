@@ -65,12 +65,6 @@ public class ServiceController {
 
     public void sendPing(){connectionManager.sendPing();}
 
-    @Deprecated
-    public void sendOneSegment(){
-        File fileToBeSent = new File(mainActivity.getApplicationContext().getFilesDir(),"PhoneC_14 Jan 2022 15_07_24__part1.mp4");
-        connectionManager.sendFile(fileToBeSent.getPath());
-    }
-
     private void initScreenCapture(){
         if(screenCaptureBuilder==null){screenCaptureBuilder=new ScreenCaptureBuilder(mainActivity);}
     }
