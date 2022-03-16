@@ -1,7 +1,5 @@
 package hu.elte.sbzbxr.phoneconnect.model.connection.items;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -17,32 +15,19 @@ public class FileFrame extends NetworkFrame{
         this.data = data;
     }
 
-    public FileFrame(NetworkFrame networkFrame,InputStream inputStream) {
-        super(networkFrame);
-        byte[] tmp = new byte[0];
-        try {
-            int dataLength = NetworkFrameCreator.readLength(inputStream);
-            tmp = NetworkFrameCreator.readNBytes(inputStream, dataLength).array();
-        }catch (IOException e){
-            e.printStackTrace();
-        }
-        data = tmp;
+    @Override
+    public Serializer serialize() {
+        return super.serialize().addField(data);
     }
 
-    @Override
-    public InputStream getData() {
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        try {
-            outputStream.write(getDataAsByteArray());
-            outputStream.write(data.length);
-            outputStream.write(data);
-            return new ByteArrayInputStream(outputStream.toByteArray());
-        }catch (IOException e){
-            e.printStackTrace();
-            return super.getData();
-        }
+    public static FileFrame deserialize(FrameType type,InputStream inputStream) throws IOException {
+        Deserializer deserializer = new Deserializer(inputStream);
+        return new FileFrame(type,deserializer.getString(),deserializer.getByteArray());
     }
 
     public int getDataLength(){return data.length;}
 
+    public byte[] getData() {
+        return data;
+    }
 }

@@ -16,17 +16,10 @@ public class MyFrameSender {
 
     public static void send(PrintStream out, NetworkFrame networkFrame) {
         try {
-            InputStream inputStream = networkFrame.getData();
-            int b = inputStream.read();
-            int written = 0;
-            while (b>=0){
-                out.write(b);
-                written++;
-                b = inputStream.read();
-            }
+            byte[] toWrite = networkFrame.serialize().getAsBytes();
+            out.write(toWrite);
             out.flush();
-            inputStream.close();
-            Log.i(LOG_TAG, networkFrame.name+" ( "+networkFrame.type.toString()+", "+ written+" bytes) successfully sent.");
+            Log.i(LOG_TAG, networkFrame.name+" ( "+networkFrame.type.toString()+", "+ toWrite.length+" bytes) successfully sent.");
         } catch (FileNotFoundException e) {
             e.printStackTrace();
             Log.e(LOG_TAG,"FileNotFound");

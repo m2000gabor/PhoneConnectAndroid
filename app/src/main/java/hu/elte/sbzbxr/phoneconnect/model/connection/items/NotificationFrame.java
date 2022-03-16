@@ -15,23 +15,6 @@ public class NotificationFrame extends NetworkFrame{
     public final String text;
     public final String appName;
 
-    public NotificationFrame(NetworkFrame networkFrame, InputStream inputStream) {
-        super(networkFrame);
-        Optional<String> title = Optional.empty();
-        Optional<String> text = Optional.empty();
-        Optional<String> appName = Optional.empty();
-        try{
-            title = Optional.of(NetworkFrameCreator.readNextStringField(inputStream));
-            text = Optional.of(NetworkFrameCreator.readNextStringField(inputStream));
-            appName = Optional.of(NetworkFrameCreator.readNextStringField(inputStream));
-        }catch (IOException ioException){
-            ioException.printStackTrace();
-        }
-        this.title = title.orElse("");
-        this.text = text.orElse("");
-        this.appName = appName.orElse("");
-    }
-
     public NotificationFrame(CharSequence title, CharSequence text, CharSequence appName) {
         this(String.valueOf(title),String.valueOf(text),String.valueOf(appName));
     }
@@ -44,20 +27,13 @@ public class NotificationFrame extends NetworkFrame{
     }
 
     @Override
-    public InputStream getData(){
-        try {
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            outputStream.write(getDataAsByteArray());
-            outputStream.write(title.getBytes().length);
-            outputStream.write(title.getBytes());
-            outputStream.write(text.getBytes().length);
-            outputStream.write(text.getBytes());
-            outputStream.write(appName.getBytes().length);
-            outputStream.write(appName.getBytes());
-            return new ByteArrayInputStream(outputStream.toByteArray());
-        }catch (IOException ioException){
-            return super.getData();
-        }
+    public Serializer serialize() {
+        return super.serialize().addField(title).addField(text).addField(appName);
+    }
+
+    public static NotificationFrame deserialize(InputStream inputStream) throws IOException {
+        Deserializer deserializer = new Deserializer(inputStream);
+        return new NotificationFrame(deserializer.getString(),deserializer.getString(),deserializer.getString());
     }
 
     @SuppressWarnings("NullableProblems")
