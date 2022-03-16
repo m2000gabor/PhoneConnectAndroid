@@ -10,7 +10,7 @@ import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.FileFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.FrameType;
 
-//version: 1.1
+//version: 1.2
 public class FileCutter {
     private static final int FILE_FRAME_MAX_SIZE=32000;//in bytes
     private final InputStream inputStream;

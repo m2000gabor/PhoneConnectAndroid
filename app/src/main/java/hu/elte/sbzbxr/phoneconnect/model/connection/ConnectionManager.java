@@ -244,7 +244,8 @@ public class ConnectionManager extends Service {
         new Thread(() ->{
             while(isSending){
                 NetworkFrame sendable = outgoingBuffer.take();
-                if(sendable!=null){MyFrameSender.send(out,sendable);
+                if(sendable!=null){
+                    FrameSender.send(out,sendable);
                 }else{
                     Log.d(LOG_TAG,"Got null from buffer");
                 }

@@ -4,15 +4,14 @@ import android.util.Log;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.PrintStream;
 
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.NetworkFrame;
 
-public class MyFrameSender {
+public class FrameSender {
     private static final String LOG_TAG = "MyFrameSender";
 
-    private MyFrameSender() {}
+    private FrameSender() {}
 
     public static void send(PrintStream out, NetworkFrame networkFrame) {
         try {

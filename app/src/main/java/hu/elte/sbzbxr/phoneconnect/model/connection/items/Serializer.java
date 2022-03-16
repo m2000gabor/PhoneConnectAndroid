@@ -1,31 +1,31 @@
 package hu.elte.sbzbxr.phoneconnect.model.connection.items;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.ByteBuffer;
 
 public class Serializer {
-    private final ByteArrayOutputStream byteArray;
+    private final ByteArrayOutputStream outputStream;
 
     public Serializer(){
-        byteArray = new ByteArrayOutputStream();
+        outputStream = new ByteArrayOutputStream();
     }
 
     public Serializer addField(FrameType type){
-        byteArray.write(type.v);
+        outputStream.write(type.v);
         return this;
     }
     public Serializer addField(String str) {
-        byteArray.write(str.getBytes().length);
-        for (byte b : str.getBytes()) byteArray.write(b);
-        return this;
+        return addField(str.getBytes());
     }
 
     public Serializer addField(byte[] data) {
-        byteArray.write(data.length);
-        for (byte b : data) byteArray.write(b);
+        byte[] length = ByteBuffer.allocate(4).putInt(data.length).array();
+        for (byte b : length) outputStream.write(b);
+        for (byte b : data) outputStream.write(b);
         return this;
     }
 
     public byte[] getAsBytes(){
-        return byteArray.toByteArray();
+        return outputStream.toByteArray();
     }
 }
