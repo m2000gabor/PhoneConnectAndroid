@@ -9,6 +9,7 @@ import hu.elte.sbzbxr.phoneconnect.model.connection.items.NetworkFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.NotificationFrame;
 import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenShot;
 
+@Deprecated
 public class OutgoingBuffer {
     private final AtomicReference<NetworkFrame> nextElement = new AtomicReference<>();
     private final LinkedBlockingQueue<ScreenShot> screenShotQueue = new LinkedBlockingQueue<>(10);

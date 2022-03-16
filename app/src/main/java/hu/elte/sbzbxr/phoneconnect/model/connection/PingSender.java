@@ -8,6 +8,7 @@ import java.io.PrintStream;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.FrameType;
 
 //todo transform to SendableMessage.class
+@Deprecated
 public class PingSender extends RunnableWithHandler {
     private static final String LOG_TAG= "Pinger";
     private final PrintStream out;

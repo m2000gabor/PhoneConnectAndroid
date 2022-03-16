@@ -24,13 +24,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
-import hu.elte.sbzbxr.phoneconnect.model.connection.buffer.OutgoingBuffer;
+import hu.elte.sbzbxr.phoneconnect.model.connection.buffer.OutgoingBuffer2;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.FileFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.FrameType;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.NetworkFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.NetworkFrameCreator;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.NotificationFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.PingFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.ScreenShotFrame;
 import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenShot;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 import hu.elte.sbzbxr.phoneconnect.ui.PickLocationActivity;
@@ -48,7 +49,7 @@ public class ConnectionManager extends Service {
     private PrintStream out;
     private InputStream in;
     private MainActivity view;//todo remove this
-    private final OutgoingBuffer outgoingBuffer=new OutgoingBuffer();
+    private final OutgoingBuffer2 outgoingBuffer=new OutgoingBuffer2();
 
     private final IBinder binder = new LocalBinder();
 
@@ -267,12 +268,19 @@ public class ConnectionManager extends Service {
     }
 
 
+    private final ExecutorService fileCutterExecutorService = Executors.newSingleThreadExecutor();
     public void sendFile(MyFileDescriptor myFileDescriptor){
         Log.d(LOG_TAG,"Would send the following file: "+ myFileDescriptor.filename);
-        new Thread(() -> outgoingBuffer.forceInsert(new FileCutter(myFileDescriptor,getContentResolver()))).start();
+        fileCutterExecutorService.submit(()->{
+            FileCutter cutter = new FileCutter(myFileDescriptor,getContentResolver());
+            while (!cutter.isEnd()){
+                outgoingBuffer.forceInsert(cutter.current());
+                cutter.next();
+            }
+        });
     }
 
     public void sendScreenShot(ScreenShot screenShot) {
-        outgoingBuffer.forceInsert(screenShot);
+        outgoingBuffer.forceInsert(new ScreenShotFrame(screenShot));
     }
 }
