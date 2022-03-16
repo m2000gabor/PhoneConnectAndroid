@@ -34,6 +34,7 @@ import java.util.Calendar;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 
+@Deprecated
 public class ScreenCapture extends Service {
     private static final String LOG_TAG ="MediaRecorder ";
     private static final String VIRTUAL_DISPLAY_NAME= "VD";

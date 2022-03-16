@@ -7,21 +7,15 @@ import java.security.InvalidParameterException;
 import java.util.Arrays;
 import java.util.Optional;
 
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.FrameType;
+
 /**
+ * @deprecated Use @NetworkFrame instead
  * @apiNote Must be the same for both Android and Windows side
- * @version 4.5
+ * @version 5.0
  */
+@Deprecated
 public class MyNetworkProtocolFrame {
-    public enum FrameType{
-        PROTOCOL_PING(1),
-        PROTOCOL_SEGMENT(2),
-        PROTOCOL_NOTIFICATION(3),
-        PROTOCOL_FILE(4);
-
-        public final byte v;
-
-        private FrameType(int val){this.v=(byte)val;}
-    }
 
     private final FrameType type;
     private final int nameLength;

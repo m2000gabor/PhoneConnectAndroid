@@ -9,6 +9,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.FrameType;
+
 @Deprecated
 public class FileSender extends RunnableWithHandler{
     private static final boolean DELETE_AFTER_SENT = false;
@@ -32,7 +34,7 @@ public class FileSender extends RunnableWithHandler{
             System.out.println("Sending " + path + "(" + readBytes + " bytes)");
 
             MyNetworkProtocolFrame outFrame = new MyNetworkProtocolFrame(
-                    MyNetworkProtocolFrame.FrameType.PROTOCOL_SEGMENT,
+                    FrameType.SEGMENT,
                     getFileNameFromPath(path),buffer);
             out.write(outFrame.getAsBytes());
             out.flush();

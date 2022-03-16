@@ -1,17 +1,14 @@
 package hu.elte.sbzbxr.phoneconnect.model.connection;
 
 import android.content.ContentResolver;
-import android.content.Context;
-import android.net.Uri;
-import android.webkit.MimeTypeMap;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
 import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
-import hu.elte.sbzbxr.phoneconnect.model.SendableFile;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.FileFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.FrameType;
 
 //version: 1.1
 public class FileCutter {
@@ -20,7 +17,7 @@ public class FileCutter {
     private final String filename;
     private boolean isClosingPart=false;
     private boolean isEnd=false;
-    private SendableFile current;
+    private FileFrame current;
 
     public FileCutter(MyFileDescriptor myFileDescriptor, ContentResolver contentResolver){
         InputStream inputStream1;
@@ -35,7 +32,7 @@ public class FileCutter {
         next();
     }
 
-    public SendableFile current(){
+    public FileFrame current(){
         return current;
     }
 
@@ -59,7 +56,7 @@ public class FileCutter {
                     read = inputStream.read();
                 }
                 if(read>=0){byteArrayOutputStream.write(read);}
-                current = new SendableFile(filename,byteArrayOutputStream.toByteArray());
+                current = new FileFrame(FrameType.FILE,filename,byteArrayOutputStream.toByteArray());
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -71,7 +68,7 @@ public class FileCutter {
         return isEnd;
     }
 
-    private SendableFile getEndOfFileFrame(){
-        return new SendableFile(filename,new byte[0]);
+    private FileFrame getEndOfFileFrame(){
+        return new FileFrame(FrameType.FILE,filename,new byte[0]);
     }
 }

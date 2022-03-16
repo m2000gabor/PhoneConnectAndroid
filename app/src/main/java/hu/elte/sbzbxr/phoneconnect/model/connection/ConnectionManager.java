@@ -25,7 +25,12 @@ import java.util.concurrent.Executors;
 
 import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.connection.buffer.OutgoingBuffer;
-import hu.elte.sbzbxr.phoneconnect.model.notification.SendableNotification;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.FileFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.FrameType;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.NetworkFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.NetworkFrameCreator;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.NotificationFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.PingFrame;
 import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenShot;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 import hu.elte.sbzbxr.phoneconnect.ui.PickLocationActivity;
@@ -155,42 +160,45 @@ public class ConnectionManager extends Service {
     private void listen(){
         new Thread(() -> {
             while (isListening) {
-                try {
-                    MyNetworkProtocolFrame frame = MyNetworkProtocolFrame.inputStreamToFrame(in);
-                    switch (frame.getType()) {
-                        case PROTOCOL_PING: pingRequestFinished(true,frame );break;
-                        case PROTOCOL_FILE: fileArrived(frame);break;
-                        default: throw new RuntimeException("Unhandled type");
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    disconnect();
+                NetworkFrame frame = NetworkFrameCreator.create(in);
+                if(frame.invalid()){disconnect();}
+                switch (frame.type) {
+                    case PING: pingRequestFinished(true,frame);break;
+                    case FILE: fileArrived(frame,in);break;
+                    default: throw new RuntimeException("Unhandled type");
                 }
             }
         }).start();
     }
 
     private final FileOutputStreamProvider streamProvider = new FileOutputStreamProvider();
-    private void fileArrived(MyNetworkProtocolFrame frame){
-        String name = frame.getName();
+    private void fileArrived(NetworkFrame networkFrame, InputStream in){
+        String name = networkFrame.name;
         if(name==null) {
             Log.e(LOG_TAG,"This frame doesn't have a name");
             return;
         }
         OutputStream os = streamProvider.getOutputStream(this, name);
-        if(frame.getDataLength()==0){
-            final String tmp = frame.getName();
+        FileFrame fileFrame = new FileFrame(networkFrame,in);
+        if (fileFrame.invalid()) disconnect();
+        if(fileFrame.getDataLength()==0){
+            final String tmp = fileFrame.name;
             Log.d(LOG_TAG,"File arrived: "+tmp);
             view.runOnUiThread(()-> Toast.makeText(getApplicationContext(),"File arrived: "+tmp,Toast.LENGTH_SHORT).show());
             streamProvider.endOfFileStreaming(name);
         }else{
-            writeThisFrame(os,frame);
+            writeThisFrame(os,fileFrame);
         }
     }
 
-    private static void writeThisFrame(OutputStream os, MyNetworkProtocolFrame frame){
+    private static void writeThisFrame(OutputStream os, FileFrame frame){
         try {
-            os.write(frame.getData());
+            InputStream is = frame.getData();
+            int b = is.read();
+            while(b>=0){
+                os.write(b);
+                b = is.read();
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -215,11 +223,13 @@ public class ConnectionManager extends Service {
     }
 
 
-    void pingRequestFinished(boolean successful, MyNetworkProtocolFrame frame){
+    void pingRequestFinished(boolean successful, NetworkFrame frame){
+        PingFrame pingFrame = new PingFrame(frame);
+        if (pingFrame.invalid()){disconnect();}
         view.runOnUiThread(() -> {
             if(successful){
-                view.successfulPing(new String(frame.getData()));
-                System.out.println("Successful ping! \nReceived message: "+new String(frame.getData()));
+                view.successfulPing(pingFrame.name);
+                System.out.println("Successful ping! \nReceived message: "+ frame.name);
             }else{
                 disconnect();
                 view.showFailMessage("Ping failed! Disconnected!");
@@ -231,7 +241,7 @@ public class ConnectionManager extends Service {
     private void startSendingThread(){
         new Thread(() ->{
             while(isSending){
-                Sendable sendable = outgoingBuffer.take();
+                NetworkFrame sendable = outgoingBuffer.take();
                 if(sendable!=null){MyFrameSender.send(out,sendable);
                 }else{
                     Log.d(LOG_TAG,"Got null from buffer");
@@ -240,7 +250,7 @@ public class ConnectionManager extends Service {
         }).start();
     }
 
-    public void sendNotification(SendableNotification n) {
+    public void sendNotification(NotificationFrame n) {
         if(n != null){
             try{
                 outgoingBuffer.forceInsert(n);
