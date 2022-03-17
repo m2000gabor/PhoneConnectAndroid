@@ -53,7 +53,7 @@ public class OutgoingBuffer2 {
         BufferPriority priority;
         switch (frame.type){
             default:priority=BufferPriority.DEFAULT;break;
-            case PING:priority=BufferPriority.INSTANT;break;
+            case INTERNAL_MESSAGE:priority=BufferPriority.INSTANT;break;
             case NOTIFICATION: priority=BufferPriority.IMPORTANT;break;
             case SEGMENT:priority=BufferPriority.SEGMENT; break;
             case FILE: priority=BufferPriority.FILE;break;

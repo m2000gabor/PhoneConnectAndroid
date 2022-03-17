@@ -169,9 +169,7 @@ public class ConnectedFragment extends Fragment {
     }
 
     //media actions
-    private void restoreMedia(){
-        throw new UnsupportedOperationException("This function has not been implemented yet");
-    }
+    private void restoreMedia(){ activityCallback.getServiceController().startRestore(); }
 
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {

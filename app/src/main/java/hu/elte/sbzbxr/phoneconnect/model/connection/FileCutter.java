@@ -15,7 +15,7 @@ public class FileCutter {
     private static final int FILE_FRAME_MAX_SIZE=32000;//in bytes
     private final InputStream inputStream;
     private final String filename;
-    private boolean isClosingPart=false;
+    private boolean hadClosingPart =false;
     private boolean isEnd=false;
     private FileFrame current;
 
@@ -43,11 +43,12 @@ public class FileCutter {
             int writtenBytes=0;
             int read = inputStream.read();
             if(read==-1){
-                if(isClosingPart){
+                if(hadClosingPart){
                     isEnd = true;
+                    inputStream.close();
                 }else{
                     current = getEndOfFileFrame();
-                    isClosingPart=true;
+                    hadClosingPart =true;
                 }
             }else{
                 while(writtenBytes<FILE_FRAME_MAX_SIZE && read>=0){

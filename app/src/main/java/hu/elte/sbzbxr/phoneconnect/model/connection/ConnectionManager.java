@@ -27,10 +27,11 @@ import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.connection.buffer.OutgoingBuffer2;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.FileFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.FrameType;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.MessageType;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.NetworkFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.NetworkFrameCreator;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.NotificationFrame;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.PingFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.MessageFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.ScreenShotFrame;
 import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenShot;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
@@ -129,8 +130,8 @@ public class ConnectionManager extends Service {
     }
 
     //Tests whether the connection is valid
-    public void sendPing(){
-        outgoingBuffer.forceInsert(new PingFrame("Hello server"));
+    public void sendMessage(MessageFrame frame){
+        outgoingBuffer.forceInsert(frame);
     }
 
     /**
@@ -165,8 +166,8 @@ public class ConnectionManager extends Service {
                     FrameType type = NetworkFrameCreator.getType(in);
                     if (type == FrameType.INVALID) {disconnect();}
                     switch (type) {
-                        case PING:
-                            pingRequestFinished(true, PingFrame.deserialize(in));
+                        case INTERNAL_MESSAGE:
+                            pingRequestFinished(true, MessageFrame.deserialize(in));
                             break;
                         case FILE:
                             fileArrived(FileFrame.deserialize(type,in));
@@ -227,12 +228,12 @@ public class ConnectionManager extends Service {
     }
 
 
-    void pingRequestFinished(boolean successful, PingFrame pingFrame){
-        if (pingFrame.invalid()){disconnect();}
+    void pingRequestFinished(boolean successful, MessageFrame messageFrame){
+        if (messageFrame.invalid()){disconnect();}
         view.runOnUiThread(() -> {
             if(successful){
-                view.successfulPing(pingFrame.name);
-                System.out.println("Successful ping! \nReceived message: "+ pingFrame.name);
+                view.successfulPing(messageFrame.name);
+                System.out.println("Successful ping! \nReceived message: "+ messageFrame.name);
             }else{
                 disconnect();
                 view.showFailMessage("Ping failed! Disconnected!");
