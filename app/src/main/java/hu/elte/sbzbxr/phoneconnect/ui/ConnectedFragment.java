@@ -2,8 +2,10 @@ package hu.elte.sbzbxr.phoneconnect.ui;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.projection.MediaProjectionManager;
@@ -175,7 +177,7 @@ public class ConnectedFragment extends Fragment {
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
                 if (isGranted) {
                     // Permission is granted. Continue the action or workflow in your app.
-                    backupData();
+                    mediaBackupAccessGranted();
                 } else {
                     System.err.println("User declined");
                 }
@@ -183,6 +185,31 @@ public class ConnectedFragment extends Fragment {
 
     private void onBackupMediaClicked(){
         requestAccess();
+    }
+
+    private void showConfirmationDialog(Runnable confirm, Runnable cancel){
+        AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+        // Add the buttons
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // User clicked OK button
+                confirm.run();
+            }
+        });
+        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // User cancelled the dialog
+                cancel.run();
+            }
+            });
+
+        //other dialog params
+        builder.setMessage("This process may take hours to complete, and tranfers all of your images to you computer. ")
+                .setTitle("Are you sure?");
+
+        // Create the AlertDialog
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
 
     private void backupData(){
@@ -203,12 +230,16 @@ public class ConnectedFragment extends Fragment {
         if (ContextCompat.checkSelfPermission(
                 requireContext(), Manifest.permission.READ_EXTERNAL_STORAGE) ==
                 PackageManager.PERMISSION_GRANTED) {
-            backupData();
+            mediaBackupAccessGranted();
         }  else {
             // You can directly ask for the permission.
             // The registered ActivityResultCallback gets the result of this request.
             requestPermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE);
         }
+    }
+
+    private void mediaBackupAccessGranted(){
+        showConfirmationDialog(this::backupData,()-> System.err.println("User cancelled"));
     }
 
     public void pingSuccessful(String msg) {
