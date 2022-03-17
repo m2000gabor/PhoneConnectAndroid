@@ -1,14 +1,11 @@
 package hu.elte.sbzbxr.phoneconnect.model.connection.items;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Optional;
 
 /**
  * @implNote should be the same for both Windows and Android part
- * @version 1.0
+ * @version 1.1
  */
 public class NotificationFrame extends NetworkFrame{
     public final String title;
@@ -33,6 +30,7 @@ public class NotificationFrame extends NetworkFrame{
 
     public static NotificationFrame deserialize(InputStream inputStream) throws IOException {
         Deserializer deserializer = new Deserializer(inputStream);
+        String nameField = deserializer.getString();
         return new NotificationFrame(deserializer.getString(),deserializer.getString(),deserializer.getString());
     }
 
