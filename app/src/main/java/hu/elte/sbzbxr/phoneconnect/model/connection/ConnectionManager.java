@@ -130,7 +130,7 @@ public class ConnectionManager extends Service {
 
     //Tests whether the connection is valid
     public void sendPing(){
-        startAsyncTask(new PingSender(out, this));
+        outgoingBuffer.forceInsert(new PingFrame("Hello server"));
     }
 
     /**

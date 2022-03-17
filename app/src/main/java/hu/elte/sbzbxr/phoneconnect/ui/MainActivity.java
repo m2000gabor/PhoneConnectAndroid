@@ -12,6 +12,7 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 
 import hu.elte.sbzbxr.phoneconnect.R;
@@ -28,6 +29,8 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
     private ActivityMainBinding binding;
 
     private final static int FRAGMENT_CONTAINER_ID = R.id.main_fragment_container;
+    public static final String CONNECTED_FRAGMENT_TAG="ConnectedFragment";
+    public static final String TO_CONNECT_FRAGMENT_TAG="ToConnectFragment";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,9 +77,6 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
         }
     }
 
-    public static final String CONNECTED_FRAGMENT_TAG="ConnectedFragment";
-    public static final String TO_CONNECT_FRAGMENT_TAG="ToConnectFragment";
-
     public void connectedTo(String ip,int port){
         Bundle bundle = new Bundle();
         bundle.putString(IP_ADDRESS,ip);
@@ -100,15 +100,10 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
         Log.e(TAG,msg);
     }
 
-
-    //todo change this
     public void successfulPing(String msg){
-        /*
-         * For Toasts:
-         * @see https://developer.android.com/guide/topics/ui/notifiers/toasts#java
-         */
         Toast.makeText(getApplicationContext(), "Ping was successful", Toast.LENGTH_SHORT).show();
-        //receivedMessageLabel.setText(msg);
+        ConnectedFragment f = (ConnectedFragment) getSupportFragmentManager().findFragmentByTag(CONNECTED_FRAGMENT_TAG);
+        if(f != null) f.pingSuccessful(msg);
     }
 
     public void afterDisconnect(){

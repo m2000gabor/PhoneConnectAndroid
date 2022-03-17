@@ -211,4 +211,7 @@ public class ConnectedFragment extends Fragment {
         }
     }
 
+    public void pingSuccessful(String msg) {
+        binding.receivedMessageLabel.setText(msg);
+    }
 }
