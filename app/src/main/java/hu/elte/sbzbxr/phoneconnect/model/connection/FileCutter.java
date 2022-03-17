@@ -1,29 +1,29 @@
 package hu.elte.sbzbxr.phoneconnect.model.connection;
 
 import android.content.ContentResolver;
-import android.net.Uri;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import hu.elte.sbzbxr.phoneconnect.model.SendableFile;
+import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.FileFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.FrameType;
 
-//version: 1.1
+//version: 1.2
 public class FileCutter {
     private static final int FILE_FRAME_MAX_SIZE=32000;//in bytes
     private final InputStream inputStream;
-    private final String path;
+    private final String filename;
     private boolean isClosingPart=false;
     private boolean isEnd=false;
-    private SendableFile current;
+    private FileFrame current;
 
-    public FileCutter(Uri uri, ContentResolver contentResolver){
+    public FileCutter(MyFileDescriptor myFileDescriptor, ContentResolver contentResolver){
         InputStream inputStream1;
-        String[] strings =uri.getPath().split("/");
-        this.path=strings[strings.length-1];
+        filename = myFileDescriptor.filename;// + "." + myFileDescriptor.fileExtension;
         try  {
-            inputStream1 = contentResolver.openInputStream(uri);
+            inputStream1 = contentResolver.openInputStream(myFileDescriptor.uri);
         } catch (IOException e) {
             inputStream1 =null;
             e.printStackTrace();
@@ -32,7 +32,7 @@ public class FileCutter {
         next();
     }
 
-    public SendableFile current(){
+    public FileFrame current(){
         return current;
     }
 
@@ -56,7 +56,7 @@ public class FileCutter {
                     read = inputStream.read();
                 }
                 if(read>=0){byteArrayOutputStream.write(read);}
-                current = new SendableFile(path,byteArrayOutputStream.toByteArray());
+                current = new FileFrame(FrameType.FILE,filename,byteArrayOutputStream.toByteArray());
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -68,7 +68,7 @@ public class FileCutter {
         return isEnd;
     }
 
-    private SendableFile getEndOfFileFrame(){
-        return new SendableFile(path,new byte[0]);
+    private FileFrame getEndOfFileFrame(){
+        return new FileFrame(FrameType.FILE,filename,new byte[0]);
     }
 }

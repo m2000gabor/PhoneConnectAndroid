@@ -3,17 +3,18 @@ package hu.elte.sbzbxr.phoneconnect.model.connection.buffer;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
 
-import hu.elte.sbzbxr.phoneconnect.model.SendableFile;
 import hu.elte.sbzbxr.phoneconnect.model.connection.FileCutter;
-import hu.elte.sbzbxr.phoneconnect.model.connection.Sendable;
-import hu.elte.sbzbxr.phoneconnect.model.notification.SendableNotification;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.FileFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.NetworkFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.NotificationFrame;
 import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenShot;
 
+@Deprecated
 public class OutgoingBuffer {
-    private final AtomicReference<Sendable> nextElement = new AtomicReference<>();
+    private final AtomicReference<NetworkFrame> nextElement = new AtomicReference<>();
     private final LinkedBlockingQueue<ScreenShot> screenShotQueue = new LinkedBlockingQueue<>(10);
-    private final LinkedBlockingQueue<SendableNotification> notificationQueue = new LinkedBlockingQueue<>();
-    private final LinkedBlockingQueue<SendableFile> fileQueue = new LinkedBlockingQueue<>(10);
+    private final LinkedBlockingQueue<NotificationFrame> notificationQueue = new LinkedBlockingQueue<>();
+    private final LinkedBlockingQueue<FileFrame> fileQueue = new LinkedBlockingQueue<>(10);
 
     public OutgoingBuffer(){}
 
@@ -21,8 +22,8 @@ public class OutgoingBuffer {
      * Potentially blocking operation. Takes the first element from the buffer. If none is available, wait until it is.
      * @return first element
      */
-    public Sendable take(){
-        Sendable ret=null;
+    public NetworkFrame take(){
+        NetworkFrame ret=null;
         try {
             synchronized (nextElement){
                 while(nextElement.get()==null){nextElement.wait();}
@@ -39,17 +40,23 @@ public class OutgoingBuffer {
     private void updateNextElement(){
         synchronized (nextElement){
             if(nextElement.get()!=null){return;}
-            Sendable next=notificationQueue.poll();
+            NetworkFrame next=notificationQueue.poll();
             if(next==null){next=fileQueue.poll();}
-            if(next==null){next=screenShotQueue.poll();}
+            if(next==null){
+                ScreenShot screen = screenShotQueue.poll();
+                if(screen != null){next=screen.toFrame();
+                    }else{ next=null;}
+            }
             nextElement.set(next);
             nextElement.notify();
         }
     }
 
-    public void forceInsert(SendableNotification notification){
-        notificationQueue.add(notification);
-        updateNextElement();
+    public void forceInsert(NotificationFrame notification){
+        synchronized (notificationQueue){
+            notificationQueue.add(notification);
+            updateNextElement();
+        }
     }
 
     public void forceInsert(ScreenShot screenShot){
@@ -69,14 +76,16 @@ public class OutgoingBuffer {
 
 
     public void forceInsert(FileCutter cutter) {
-        while (!cutter.isEnd()){
-            try {
-                fileQueue.put(cutter.current());
-                cutter.next();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+        synchronized (fileQueue){
+            while (!cutter.isEnd()){
+                try {
+                    fileQueue.put(cutter.current());
+                    cutter.next();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                updateNextElement();
             }
-            updateNextElement();
         }
     }
 }

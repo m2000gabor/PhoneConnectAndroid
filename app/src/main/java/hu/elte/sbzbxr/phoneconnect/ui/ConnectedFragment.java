@@ -1,11 +1,17 @@
 package hu.elte.sbzbxr.phoneconnect.ui;
 
+import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.ContentResolver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,11 +19,15 @@ import android.view.ViewGroup;
 import android.widget.CompoundButton;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import hu.elte.sbzbxr.phoneconnect.databinding.FragmentConnectedBinding;
+import hu.elte.sbzbxr.phoneconnect.model.MyUriQuery;
 
 public class ConnectedFragment extends Fragment {
     private static final String TAG = ToConnectFragment.class.getName();
@@ -85,7 +95,7 @@ public class ConnectedFragment extends Fragment {
             if (data != null) {
                 uri = data.getData();
                 // Perform operations on the document using its URI.
-                activityCallback.getServiceController().sendFile(uri);
+                activityCallback.getServiceController().sendFile(MyUriQuery.querySingeFile(uri,requireContext()));
             }
         }
     }
@@ -104,6 +114,9 @@ public class ConnectedFragment extends Fragment {
         );
 
         binding.pingButton.setOnClickListener(v -> activityCallback.getServiceController().sendPing());
+
+        binding.saveMediaActionButton.setOnClickListener(v -> onBackupMediaClicked());
+        binding.restoreMediaActionButton.setOnClickListener(v -> restoreMedia());
 
 
         //Setup processes
@@ -153,5 +166,83 @@ public class ConnectedFragment extends Fragment {
 
     private void stopScreenCaptureAndRecord(){
         activityCallback.getServiceController().stopScreenCapture();
+    }
+
+    //media actions
+    private void restoreMedia(){
+        throw new UnsupportedOperationException("This function has not been implemented yet");
+    }
+
+    private final ActivityResultLauncher<String> requestPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                if (isGranted) {
+                    // Permission is granted. Continue the action or workflow in your app.
+                    mediaBackupAccessGranted();
+                } else {
+                    System.err.println("User declined");
+                }
+            });
+
+    private void onBackupMediaClicked(){
+        requestAccess();
+    }
+
+    private void showConfirmationDialog(Runnable confirm, Runnable cancel){
+        AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+        // Add the buttons
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // User clicked OK button
+                confirm.run();
+            }
+        });
+        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // User cancelled the dialog
+                cancel.run();
+            }
+            });
+
+        //other dialog params
+        builder.setMessage("This process may take hours to complete, and tranfers all of your images to you computer. ")
+                .setTitle("Are you sure?");
+
+        // Create the AlertDialog
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
+    private void backupData(){
+        //ContentResolver contentResolver = requireActivity().getContentResolver();
+        ContentResolver contentResolver = requireActivity().getApplicationContext().getContentResolver();
+        //ContentResolver contentResolver = getContext().getContentResolver();
+
+        new Thread(() ->
+                    MyUriQuery.queryDirectory(contentResolver,
+                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,MediaStore.Images.Media._ID).
+                    stream().
+                    limit(2).
+                    forEach(myFileDescriptor -> activityCallback.getServiceController().sendFile(myFileDescriptor))
+                ).start();
+    }
+
+    private void requestAccess(){
+        if (ContextCompat.checkSelfPermission(
+                requireContext(), Manifest.permission.READ_EXTERNAL_STORAGE) ==
+                PackageManager.PERMISSION_GRANTED) {
+            mediaBackupAccessGranted();
+        }  else {
+            // You can directly ask for the permission.
+            // The registered ActivityResultCallback gets the result of this request.
+            requestPermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE);
+        }
+    }
+
+    private void mediaBackupAccessGranted(){
+        showConfirmationDialog(this::backupData,()-> System.err.println("User cancelled"));
+    }
+
+    public void pingSuccessful(String msg) {
+        binding.receivedMessageLabel.setText(msg);
     }
 }

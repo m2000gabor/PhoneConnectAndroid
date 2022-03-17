@@ -3,13 +3,13 @@ package hu.elte.sbzbxr.phoneconnect.model.recording;
 import android.graphics.Bitmap;
 
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 
-import hu.elte.sbzbxr.phoneconnect.model.connection.MyNetworkProtocolFrame;
-import hu.elte.sbzbxr.phoneconnect.model.connection.Sendable;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.FileFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.FrameType;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.NetworkFrame;
 
-public class ScreenShot implements Sendable {
-    private static final int JPEG_QUALITY=10;
+public class ScreenShot{
+    public static final int JPEG_QUALITY=10;
     private final String name;
     private final Bitmap bitmap;
 
@@ -26,17 +26,9 @@ public class ScreenShot implements Sendable {
         return bitmap;
     }
 
-    @Override
-    public MyNetworkProtocolFrame toFrame() {
+    public NetworkFrame toFrame() {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(3000000);
         getBitmap().compress(Bitmap.CompressFormat.JPEG,JPEG_QUALITY,byteArrayOutputStream);
-        return new MyNetworkProtocolFrame(
-                MyNetworkProtocolFrame.FrameType.PROTOCOL_SEGMENT,
-                getName(),byteArrayOutputStream.toByteArray());
-    }
-
-    @Override
-    public String getTypeName() {
-        return "Screenshot";
+        return new FileFrame(FrameType.SEGMENT, getName(),byteArrayOutputStream.toByteArray());
     }
 }

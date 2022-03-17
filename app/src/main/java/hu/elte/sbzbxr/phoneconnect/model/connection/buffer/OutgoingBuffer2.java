@@ -1,0 +1,88 @@
+package hu.elte.sbzbxr.phoneconnect.model.connection.buffer;
+
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.NetworkFrame;
+
+public class OutgoingBuffer2 {
+    private final ConcurrentHashMap<BufferPriority, BlockingQueue<NetworkFrame>> map;
+
+    private enum BufferPriority{
+        INSTANT(1),
+        IMPORTANT(2),
+        DEFAULT(3),
+        FILE(4),
+        SEGMENT(5);
+
+        public final byte v;
+
+        BufferPriority(int val){this.v=(byte)val;}
+    }
+
+    public OutgoingBuffer2(){
+        map = new ConcurrentHashMap<>();
+        for(BufferPriority priority : BufferPriority.values()){
+            if(getMaxSize(priority) != Integer.MAX_VALUE){
+                map.put(priority,new ArrayBlockingQueue<>(getMaxSize(priority)));
+            }else{
+                map.put(priority,new LinkedBlockingQueue<>());
+            }
+        }
+    }
+
+    /**
+     * Potentially blocking operation. Takes the most important element from the buffer. If none is available, wait until it is.
+     * @return first element
+     */
+    public NetworkFrame take(){
+        NetworkFrame ret=null;
+        while (ret==null){
+            for(BufferPriority p : BufferPriority.values()){
+                ret = map.get(p).poll();
+                if(ret !=null) break;
+            }
+        }
+        return ret;
+    }
+
+
+    public void forceInsert(NetworkFrame frame){
+        BufferPriority priority;
+        switch (frame.type){
+            default:priority=BufferPriority.DEFAULT;break;
+            case PING:priority=BufferPriority.INSTANT;break;
+            case NOTIFICATION: priority=BufferPriority.IMPORTANT;break;
+            case SEGMENT:priority=BufferPriority.SEGMENT; break;
+            case FILE: priority=BufferPriority.FILE;break;
+        }
+
+        try {
+            if(priority==BufferPriority.SEGMENT){
+                if(!map.get(priority).offer(frame)){
+                    onBufferIsFull(map.get(priority),frame);
+                }
+            }else{
+                map.get(priority).put(frame);
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static int getMaxSize(BufferPriority type){
+        switch (type){
+            default: return Integer.MAX_VALUE;
+            case SEGMENT: return 10;
+            case FILE: return 20;
+        }
+    }
+
+
+    private static void onBufferIsFull(BlockingQueue<NetworkFrame> queue,NetworkFrame toInsert){
+        //BufferReducerAlgorithms.removeEvenIndices(queue,toInsert);
+        BufferReducerAlgorithms.clearQueue(queue, toInsert);
+    }
+}

@@ -10,22 +10,22 @@ import android.os.IBinder;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 import android.util.Log;
-import android.widget.Toast;
 
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.NotificationFrame;
 
 public class MyNotificationListenerService extends NotificationListenerService {
     private static final String LOG_TAG = "NotificationListener";
     private ConnectionManager connectionManager;
 
-    private SendableNotification getUsefulData(StatusBarNotification notification){
+    private NotificationFrame getUsefulData(StatusBarNotification notification){
         CharSequence title =notification.getNotification().extras.getCharSequence("android.title");
         CharSequence text =notification.getNotification().extras.getCharSequence("android.text");
         CharSequence appName = getAppName(notification.getPackageName());
         if(title == null){title="unknown title";}
         if(text == null){text="unknown text";}
         if(appName == null){appName="unknown app";}
-        return new SendableNotification(title,text,appName);
+        return new NotificationFrame(title,text,appName);
     }
 
     private void sendNotification(StatusBarNotification sbn){

@@ -23,8 +23,15 @@ import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import hu.elte.sbzbxr.phoneconnect.model.connection.buffer.OutgoingBuffer;
-import hu.elte.sbzbxr.phoneconnect.model.notification.SendableNotification;
+import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
+import hu.elte.sbzbxr.phoneconnect.model.connection.buffer.OutgoingBuffer2;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.FileFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.FrameType;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.NetworkFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.NetworkFrameCreator;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.NotificationFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.PingFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.ScreenShotFrame;
 import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenShot;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 import hu.elte.sbzbxr.phoneconnect.ui.PickLocationActivity;
@@ -42,7 +49,7 @@ public class ConnectionManager extends Service {
     private PrintStream out;
     private InputStream in;
     private MainActivity view;//todo remove this
-    private final OutgoingBuffer outgoingBuffer=new OutgoingBuffer();
+    private final OutgoingBuffer2 outgoingBuffer=new OutgoingBuffer2();
 
     private final IBinder binder = new LocalBinder();
 
@@ -123,7 +130,7 @@ public class ConnectionManager extends Service {
 
     //Tests whether the connection is valid
     public void sendPing(){
-        startAsyncTask(new PingSender(out, this));
+        outgoingBuffer.forceInsert(new PingFrame("Hello server"));
     }
 
     /**
@@ -155,13 +162,19 @@ public class ConnectionManager extends Service {
         new Thread(() -> {
             while (isListening) {
                 try {
-                    MyNetworkProtocolFrame frame = MyNetworkProtocolFrame.inputStreamToFrame(in);
-                    switch (frame.getType()) {
-                        case PROTOCOL_PING: pingRequestFinished(true,frame );break;
-                        case PROTOCOL_FILE: fileArrived(frame);break;
-                        default: throw new RuntimeException("Unhandled type");
+                    FrameType type = NetworkFrameCreator.getType(in);
+                    if (type == FrameType.INVALID) {disconnect();}
+                    switch (type) {
+                        case PING:
+                            pingRequestFinished(true, PingFrame.deserialize(in));
+                            break;
+                        case FILE:
+                            fileArrived(FileFrame.deserialize(type,in));
+                            break;
+                        default:
+                            throw new RuntimeException("Unhandled type");
                     }
-                } catch (IOException e) {
+                }catch (IOException e){
                     e.printStackTrace();
                     disconnect();
                 }
@@ -170,24 +183,24 @@ public class ConnectionManager extends Service {
     }
 
     private final FileOutputStreamProvider streamProvider = new FileOutputStreamProvider();
-    private void fileArrived(MyNetworkProtocolFrame frame){
-        String name = frame.getName();
+    private void fileArrived(FileFrame fileFrame) {
+        String name = fileFrame.name;
         if(name==null) {
             Log.e(LOG_TAG,"This frame doesn't have a name");
             return;
         }
         OutputStream os = streamProvider.getOutputStream(this, name);
-        if(frame.getDataLength()==0){
-            final String tmp = frame.getName();
+        if(fileFrame.getDataLength()==0){
+            final String tmp = fileFrame.name;
             Log.d(LOG_TAG,"File arrived: "+tmp);
             view.runOnUiThread(()-> Toast.makeText(getApplicationContext(),"File arrived: "+tmp,Toast.LENGTH_SHORT).show());
             streamProvider.endOfFileStreaming(name);
         }else{
-            writeThisFrame(os,frame);
+            writeThisFrame(os,fileFrame);
         }
     }
 
-    private static void writeThisFrame(OutputStream os, MyNetworkProtocolFrame frame){
+    private static void writeThisFrame(OutputStream os, FileFrame frame){
         try {
             os.write(frame.getData());
         } catch (IOException e) {
@@ -214,11 +227,12 @@ public class ConnectionManager extends Service {
     }
 
 
-    void pingRequestFinished(boolean successful, MyNetworkProtocolFrame frame){
+    void pingRequestFinished(boolean successful, PingFrame pingFrame){
+        if (pingFrame.invalid()){disconnect();}
         view.runOnUiThread(() -> {
             if(successful){
-                view.successfulPing(new String(frame.getData()));
-                System.out.println("Successful ping! \nReceived message: "+new String(frame.getData()));
+                view.successfulPing(pingFrame.name);
+                System.out.println("Successful ping! \nReceived message: "+ pingFrame.name);
             }else{
                 disconnect();
                 view.showFailMessage("Ping failed! Disconnected!");
@@ -230,8 +244,9 @@ public class ConnectionManager extends Service {
     private void startSendingThread(){
         new Thread(() ->{
             while(isSending){
-                Sendable sendable = outgoingBuffer.take();
-                if(sendable!=null){MyFrameSender.send(out,sendable);
+                NetworkFrame sendable = outgoingBuffer.take();
+                if(sendable!=null){
+                    FrameSender.send(out,sendable);
                 }else{
                     Log.d(LOG_TAG,"Got null from buffer");
                 }
@@ -239,7 +254,7 @@ public class ConnectionManager extends Service {
         }).start();
     }
 
-    public void sendNotification(SendableNotification n) {
+    public void sendNotification(NotificationFrame n) {
         if(n != null){
             try{
                 outgoingBuffer.forceInsert(n);
@@ -252,17 +267,20 @@ public class ConnectionManager extends Service {
         }
     }
 
-    @Deprecated
-    public void sendFile(String path){
-        startAsyncTask(new FileSender(out,path));
-    }
 
-    public void sendFile(Uri path){
-        Log.d(LOG_TAG,"Would send: "+path.toString());
-        new Thread(() -> outgoingBuffer.forceInsert(new FileCutter(path,getContentResolver()))).start();
+    private final ExecutorService fileCutterExecutorService = Executors.newSingleThreadExecutor();
+    public void sendFile(MyFileDescriptor myFileDescriptor){
+        Log.d(LOG_TAG,"Would send the following file: "+ myFileDescriptor.filename);
+        fileCutterExecutorService.submit(()->{
+            FileCutter cutter = new FileCutter(myFileDescriptor,getContentResolver());
+            while (!cutter.isEnd()){
+                outgoingBuffer.forceInsert(cutter.current());
+                cutter.next();
+            }
+        });
     }
 
     public void sendScreenShot(ScreenShot screenShot) {
-        outgoingBuffer.forceInsert(screenShot);
+        outgoingBuffer.forceInsert(new ScreenShotFrame(screenShot));
     }
 }
