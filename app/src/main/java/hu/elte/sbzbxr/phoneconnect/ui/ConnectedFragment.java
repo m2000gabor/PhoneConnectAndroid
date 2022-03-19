@@ -43,7 +43,7 @@ public class ConnectedFragment extends Fragment {
 
     @Override
     public View onCreateView(
-            LayoutInflater inflater, ViewGroup container,
+            @NonNull LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState
     ) {
 
@@ -96,7 +96,7 @@ public class ConnectedFragment extends Fragment {
         }else if(requestCode == REQUEST_FILE_PICKER && resultCode==Activity.RESULT_OK){
             // The result data contains a URI for the document or directory that
             // the user selected.
-            Uri uri = null;
+            Uri uri;
             if (data != null) {
                 uri = data.getData();
                 // Perform operations on the document using its URI.
@@ -125,14 +125,11 @@ public class ConnectedFragment extends Fragment {
 
 
         //Setup processes
-        binding.includedScreenSharePanel.screenShareSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if(isChecked){
-                    startStreamingClicked();
-                }else{
-                    stopScreenCaptureAndRecord();
-                }
+        binding.includedScreenSharePanel.screenShareSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if(isChecked){
+                startStreamingClicked();
+            }else{
+                stopScreenCaptureAndRecord();
             }
         });
 
@@ -193,18 +190,8 @@ public class ConnectedFragment extends Fragment {
     private void showConfirmationDialog(Runnable confirm, Runnable cancel,String message){
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         // Add the buttons
-        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int id) {
-                // User clicked OK button
-                confirm.run();
-            }
-        });
-        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int id) {
-                // User cancelled the dialog
-                cancel.run();
-            }
-            });
+        builder.setPositiveButton("OK", (dialog, id) -> {confirm.run(); });
+        builder.setNegativeButton("Cancel", (dialog, id) -> {cancel.run(); });
 
         //other dialog params
         builder.setMessage(message)
@@ -257,7 +244,7 @@ public class ConnectedFragment extends Fragment {
             Toast.makeText(getContext(),"There's no available backup to restore",Toast.LENGTH_SHORT).show();
         }else{
             showConfirmationDialog(
-                    ()->activityCallback.getServiceController().requestRestore(backupList.get(0)),
+                    ()->activityCallback.getServiceController().requestRestore(backupList.get(backupList.size()-1)),
                     ()-> System.err.println("User cancelled"),
                     "This process may take hours to complete, and restore all of your images from your backup to this phone.");
         }

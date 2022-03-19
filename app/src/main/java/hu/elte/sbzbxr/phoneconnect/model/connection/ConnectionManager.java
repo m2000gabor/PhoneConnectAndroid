@@ -173,7 +173,8 @@ public class ConnectionManager extends Service {
                             messageArrived(in);
                             break;
                         case RESTORE_FILE:
-                            //restoreArrived(BackupFileFrame.deserialize(type,in));
+                            fileArrived(BackupFileFrame.deserialize(type,in));
+                            break;
                         case FILE:
                             fileArrived(FileFrame.deserialize(type,in));
                             break;
@@ -195,6 +196,7 @@ public class ConnectionManager extends Service {
             Log.e(LOG_TAG,"This frame doesn't have a name");
             return;
         }
+        //System.out.println("Frame arrived");
         OutputStream os = streamProvider.getOutputStream(this, name);
         if(fileFrame.getDataLength()==0){
             final String tmp = fileFrame.name;
