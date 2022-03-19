@@ -43,7 +43,7 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
         setContentView(binding.getRoot());
 
         //toolbar
-        Toolbar myToolbar = (Toolbar) findViewById(R.id.my_toolbar);
+        Toolbar myToolbar = findViewById(R.id.my_toolbar);
         setSupportActionBar(myToolbar);
         myToolbar.setTitle("Phone Connect");
         myToolbar.setTitleTextColor(Color.WHITE);
@@ -70,13 +70,11 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle item selection
-        switch (item.getItemId()) {
-            case R.id.action_settings:
-                launchSettings();
-                return true;
-            default:
-                return super.onOptionsItemSelected(item);
+        if (item.getItemId() == R.id.action_settings) {
+            launchSettings();
+            return true;
         }
+        return super.onOptionsItemSelected(item);
     }
 
     public void connectedTo(String ip,int port){
@@ -137,5 +135,10 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
     public void availableToRestore(List<String> backupList) {
         ConnectedFragment f = (ConnectedFragment) getSupportFragmentManager().findFragmentByTag(CONNECTED_FRAGMENT_TAG);
         if(f != null) f.availableToRestore(backupList);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
     }
 }
