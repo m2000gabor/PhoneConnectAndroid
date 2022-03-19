@@ -23,6 +23,7 @@ public class ScreenShotFrame extends NetworkFrame{
     }
 
     public synchronized void transform(){
+        if(isTransformed()) return;
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(3000000);
         screenShot.getBitmap().compress(Bitmap.CompressFormat.JPEG,JPEG_QUALITY,byteArrayOutputStream);
         segmentFrame = new SegmentFrame(screenShot.getName(),byteArrayOutputStream.toByteArray(),folderName);
