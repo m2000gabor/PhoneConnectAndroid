@@ -19,11 +19,11 @@ public class BufferReducerAlgorithmsTest {
     @Before
     public void setUp() throws Exception {
         queue = new LinkedBlockingQueue<>(4);
-        queue.offer(new ScreenShot("1",null));
-        queue.offer(new ScreenShot("2",null));
-        queue.offer(new ScreenShot("3",null));
-        queue.offer(new ScreenShot("4",null));
-        toInsert = new ScreenShot("5",null);
+        queue.offer(new ScreenShot("1",null, null));
+        queue.offer(new ScreenShot("2",null, null));
+        queue.offer(new ScreenShot("3",null, null));
+        queue.offer(new ScreenShot("4",null, null));
+        toInsert = new ScreenShot("5",null, null);
     }
 
     @Test

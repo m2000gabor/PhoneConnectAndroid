@@ -25,13 +25,16 @@ import java.util.concurrent.Executors;
 
 import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.connection.buffer.OutgoingBuffer2;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.BackupFileFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.FileFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.FrameType;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.MessageType;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.RestorePostMessageFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.MessageType;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.NetworkFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.NetworkFrameCreator;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.NotificationFrame;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.MessageFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.MessageFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.PingMessageFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.ScreenShotFrame;
 import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenShot;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
@@ -167,8 +170,10 @@ public class ConnectionManager extends Service {
                     if (type == FrameType.INVALID) {disconnect();}
                     switch (type) {
                         case INTERNAL_MESSAGE:
-                            pingRequestFinished(true, MessageFrame.deserialize(in));
+                            messageArrived(in);
                             break;
+                        case RESTORE_FILE:
+                            //restoreArrived(BackupFileFrame.deserialize(type,in));
                         case FILE:
                             fileArrived(FileFrame.deserialize(type,in));
                             break;
@@ -228,17 +233,28 @@ public class ConnectionManager extends Service {
     }
 
 
-    void pingRequestFinished(boolean successful, MessageFrame messageFrame){
-        if (messageFrame.invalid()){disconnect();}
+
+    void messageArrived(InputStream in) throws IOException{
+        MessageFrame messageFrame = MessageFrame.deserialize(in);
+        MessageType type = messageFrame.messageType;
+        switch (type){
+            case PING: pingArrived(PingMessageFrame.deserialize(in)); break;
+            case RESTORE_POST_AVAILABLE: restoreFolderListArrived(RestorePostMessageFrame.deserialize(in)); break;
+            default: System.err.println("Unknown messageType"); break;
+        }
+    }
+
+    private void restoreFolderListArrived(RestorePostMessageFrame messageFrame){
         view.runOnUiThread(() -> {
-            if(successful){
-                view.successfulPing(messageFrame.name);
-                System.out.println("Successful ping! \nReceived message: "+ messageFrame.name);
-            }else{
-                disconnect();
-                view.showFailMessage("Ping failed! Disconnected!");
-                view.afterDisconnect();
-            }
+            view.availableToRestore(messageFrame.getBackups());
+            System.out.println("Available restores arrived! ");
+        });
+    }
+
+    private void pingArrived(PingMessageFrame messageFrame){
+        view.runOnUiThread(() -> {
+            view.successfulPing(messageFrame.message);
+            System.out.println("Successful ping! \nReceived message: "+ messageFrame.message);
         });
     }
 
@@ -270,10 +286,10 @@ public class ConnectionManager extends Service {
 
 
     private final ExecutorService fileCutterExecutorService = Executors.newSingleThreadExecutor();
-    public void sendFile(MyFileDescriptor myFileDescriptor){
+    public void sendFile(MyFileDescriptor myFileDescriptor, FrameType fileType, String backupId){
         Log.d(LOG_TAG,"Would send the following file: "+ myFileDescriptor.filename);
         fileCutterExecutorService.submit(()->{
-            FileCutter cutter = new FileCutter(myFileDescriptor,getContentResolver());
+            FileCutter cutter = new FileCutter(myFileDescriptor,getContentResolver(),fileType,backupId);
             while (!cutter.isEnd()){
                 outgoingBuffer.forceInsert(cutter.current());
                 cutter.next();

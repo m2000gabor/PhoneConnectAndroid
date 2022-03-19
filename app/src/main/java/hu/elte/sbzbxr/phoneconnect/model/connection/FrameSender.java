@@ -18,7 +18,7 @@ public class FrameSender {
             byte[] toWrite = networkFrame.serialize().getAsBytes();
             out.write(toWrite);
             out.flush();
-            Log.i(LOG_TAG, networkFrame.name+" ( "+networkFrame.type.toString()+", "+ toWrite.length+" bytes) successfully sent.");
+            Log.i(LOG_TAG, networkFrame.type.toString() +" ( "+networkFrame.type.toString()+", "+ toWrite.length+" bytes) successfully sent.");
         } catch (FileNotFoundException e) {
             e.printStackTrace();
             Log.e(LOG_TAG,"FileNotFound");

@@ -6,17 +6,15 @@ package hu.elte.sbzbxr.phoneconnect.model.connection.items;
  */
 public abstract class NetworkFrame {
     public final FrameType type;
-    public final String name;
 
-    protected NetworkFrame(FrameType type, String name) {
+    protected NetworkFrame(FrameType type) {
         this.type = type;
-        this.name = name;
     }
 
     public boolean invalid(){return type==FrameType.INVALID;}
 
     public Serializer serialize(){
         Serializer serializer = new Serializer();
-        return serializer.addField(type).addField(name);
+        return serializer.addField(type);
     }
 }

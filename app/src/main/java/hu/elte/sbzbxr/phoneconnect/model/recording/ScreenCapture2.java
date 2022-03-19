@@ -137,7 +137,7 @@ public class ScreenCapture2 extends Service {
                     imageBuffer.clear();
 
                     connectionManager.sendScreenShot(new ScreenShot(
-                            getScreenShotName(), bitmap));
+                            getScreenShotName(), bitmap, fileBaseName));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

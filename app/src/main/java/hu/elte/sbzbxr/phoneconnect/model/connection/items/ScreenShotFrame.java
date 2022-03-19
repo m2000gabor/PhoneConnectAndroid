@@ -5,28 +5,38 @@ import static hu.elte.sbzbxr.phoneconnect.model.recording.ScreenShot.JPEG_QUALIT
 import android.graphics.Bitmap;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
 import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenShot;
 
+//version 2.0
 public class ScreenShotFrame extends NetworkFrame{
     private final transient ScreenShot screenShot;
-    private byte[] data;
+    private final String folderName;
+    private SegmentFrame segmentFrame = null;
 
     public ScreenShotFrame(ScreenShot screenShot) {
-        super(FrameType.SEGMENT, screenShot.getName());
+        super(FrameType.SEGMENT);
         this.screenShot=screenShot;
-        data=null;
+        this.folderName = screenShot.getStreamId();
     }
 
-    public void transform(){
+    public synchronized void transform(){
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(3000000);
         screenShot.getBitmap().compress(Bitmap.CompressFormat.JPEG,JPEG_QUALITY,byteArrayOutputStream);
-        data = byteArrayOutputStream.toByteArray();
+        segmentFrame = new SegmentFrame(screenShot.getName(),byteArrayOutputStream.toByteArray(),folderName);
+    }
+
+    private boolean isTransformed(){return segmentFrame!=null;}
+
+    public static SegmentFrame deserialize(FrameType type, InputStream inputStream) throws IOException {
+        return SegmentFrame.deserialize(type, inputStream);
     }
 
     @Override
     public Serializer serialize() {
-        transform();
-        return super.serialize().addField(data);
+        if(!isTransformed()) transform();
+        return segmentFrame.serialize();
     }
 }

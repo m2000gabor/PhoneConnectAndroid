@@ -5,7 +5,7 @@ import java.io.InputStream;
 
 /**
  * @implNote should be the same for both Windows and Android part
- * @version 1.1
+ * @version 1.2
  */
 public class NotificationFrame extends NetworkFrame{
     public final String title;
@@ -17,7 +17,7 @@ public class NotificationFrame extends NetworkFrame{
     }
 
     public NotificationFrame(String title, String text, String appName) {
-        super(FrameType.NOTIFICATION, title);
+        super(FrameType.NOTIFICATION);
         this.title = title;
         this.text = text;
         this.appName = appName;
@@ -30,7 +30,6 @@ public class NotificationFrame extends NetworkFrame{
 
     public static NotificationFrame deserialize(InputStream inputStream) throws IOException {
         Deserializer deserializer = new Deserializer(inputStream);
-        String nameField = deserializer.getString();
         return new NotificationFrame(deserializer.getString(),deserializer.getString(),deserializer.getString());
     }
 
