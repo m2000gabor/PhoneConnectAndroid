@@ -14,7 +14,7 @@ import java.util.List;
 
 public class MyUriQuery {
     //Based on: https://stackoverflow.com/questions/5568874/how-to-extract-the-file-name-from-uri-returned-from-intent-action-get-content
-    public static MyFileDescriptor querySingeFile(Uri uri, Context context){
+    public static MyFileDescriptor querySingleFile(Uri uri, Context context){
         MyFileDescriptor ret;
         try(Cursor returnCursor = context.getContentResolver().query(uri, null, null, null, null);){
             assert returnCursor != null;

@@ -15,6 +15,8 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 
+import java.util.List;
+
 import hu.elte.sbzbxr.phoneconnect.R;
 import hu.elte.sbzbxr.phoneconnect.controller.ServiceController;
 import hu.elte.sbzbxr.phoneconnect.databinding.ActivityMainBinding;
@@ -132,4 +134,8 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
         return serviceController;
     }
 
+    public void availableToRestore(List<String> backupList) {
+        ConnectedFragment f = (ConnectedFragment) getSupportFragmentManager().findFragmentByTag(CONNECTED_FRAGMENT_TAG);
+        if(f != null) f.availableToRestore(backupList);
+    }
 }

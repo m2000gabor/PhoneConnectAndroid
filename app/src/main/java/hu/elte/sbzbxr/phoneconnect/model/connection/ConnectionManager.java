@@ -25,12 +25,16 @@ import java.util.concurrent.Executors;
 
 import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.connection.buffer.OutgoingBuffer2;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.BackupFileFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.FileFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.FrameType;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.RestorePostMessageFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.MessageType;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.NetworkFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.NetworkFrameCreator;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.NotificationFrame;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.PingFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.MessageFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.PingMessageFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.ScreenShotFrame;
 import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenShot;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
@@ -78,7 +82,7 @@ public class ConnectionManager extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         try{
-            Uri uri = (Uri) intent.getParcelableExtra(PickLocationActivity.URI_OF_FILE);
+            Uri uri = intent.getParcelableExtra(PickLocationActivity.URI_OF_FILE);
             String filename = intent.getStringExtra(FILENAME_TO_CREATE);
             if(uri !=null){
                 openOutputStream(filename,uri);
@@ -129,8 +133,8 @@ public class ConnectionManager extends Service {
     }
 
     //Tests whether the connection is valid
-    public void sendPing(){
-        outgoingBuffer.forceInsert(new PingFrame("Hello server"));
+    public void sendMessage(MessageFrame frame){
+        outgoingBuffer.forceInsert(frame);
     }
 
     /**
@@ -165,8 +169,11 @@ public class ConnectionManager extends Service {
                     FrameType type = NetworkFrameCreator.getType(in);
                     if (type == FrameType.INVALID) {disconnect();}
                     switch (type) {
-                        case PING:
-                            pingRequestFinished(true, PingFrame.deserialize(in));
+                        case INTERNAL_MESSAGE:
+                            messageArrived(in);
+                            break;
+                        case RESTORE_FILE:
+                            fileArrived(BackupFileFrame.deserialize(type,in));
                             break;
                         case FILE:
                             fileArrived(FileFrame.deserialize(type,in));
@@ -189,6 +196,7 @@ public class ConnectionManager extends Service {
             Log.e(LOG_TAG,"This frame doesn't have a name");
             return;
         }
+        //System.out.println("Frame arrived");
         OutputStream os = streamProvider.getOutputStream(this, name);
         if(fileFrame.getDataLength()==0){
             final String tmp = fileFrame.name;
@@ -227,17 +235,28 @@ public class ConnectionManager extends Service {
     }
 
 
-    void pingRequestFinished(boolean successful, PingFrame pingFrame){
-        if (pingFrame.invalid()){disconnect();}
+
+    void messageArrived(InputStream in) throws IOException{
+        MessageFrame messageFrame = MessageFrame.deserialize(in);
+        MessageType type = messageFrame.messageType;
+        switch (type){
+            case PING: pingArrived(PingMessageFrame.deserialize(in)); break;
+            case RESTORE_POST_AVAILABLE: restoreFolderListArrived(RestorePostMessageFrame.deserialize(in)); break;
+            default: System.err.println("Unknown messageType"); break;
+        }
+    }
+
+    private void restoreFolderListArrived(RestorePostMessageFrame messageFrame){
         view.runOnUiThread(() -> {
-            if(successful){
-                view.successfulPing(pingFrame.name);
-                System.out.println("Successful ping! \nReceived message: "+ pingFrame.name);
-            }else{
-                disconnect();
-                view.showFailMessage("Ping failed! Disconnected!");
-                view.afterDisconnect();
-            }
+            view.availableToRestore(messageFrame.getBackups());
+            System.out.println("Available restores arrived! ");
+        });
+    }
+
+    private void pingArrived(PingMessageFrame messageFrame){
+        view.runOnUiThread(() -> {
+            view.successfulPing(messageFrame.message);
+            System.out.println("Successful ping! \nReceived message: "+ messageFrame.message);
         });
     }
 
@@ -269,10 +288,10 @@ public class ConnectionManager extends Service {
 
 
     private final ExecutorService fileCutterExecutorService = Executors.newSingleThreadExecutor();
-    public void sendFile(MyFileDescriptor myFileDescriptor){
+    public void sendFile(MyFileDescriptor myFileDescriptor, FrameType fileType, String backupId){
         Log.d(LOG_TAG,"Would send the following file: "+ myFileDescriptor.filename);
         fileCutterExecutorService.submit(()->{
-            FileCutter cutter = new FileCutter(myFileDescriptor,getContentResolver());
+            FileCutter cutter = new FileCutter(myFileDescriptor,getContentResolver(),fileType,backupId);
             while (!cutter.isEnd()){
                 outgoingBuffer.forceInsert(cutter.current());
                 cutter.next();
@@ -280,7 +299,10 @@ public class ConnectionManager extends Service {
         });
     }
 
+    private final ExecutorService compressToJPGExecutorService = Executors.newFixedThreadPool(4);
     public void sendScreenShot(ScreenShot screenShot) {
-        outgoingBuffer.forceInsert(new ScreenShotFrame(screenShot));
+        ScreenShotFrame screenShotFrame = new ScreenShotFrame(screenShot);
+        outgoingBuffer.forceInsert(screenShotFrame);
+        compressToJPGExecutorService.submit(screenShotFrame::transform);
     }
 }

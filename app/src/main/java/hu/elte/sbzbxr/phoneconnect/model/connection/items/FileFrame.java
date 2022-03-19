@@ -5,19 +5,21 @@ import java.io.InputStream;
 
 /**
  * @implNote should be the same for both Windows and Android part
- * @version 1.0
+ * @version 1.3
  */
 public class FileFrame extends NetworkFrame{
-    private final byte[] data;
+    public final String name;
+    public final byte[] data;
 
-    public FileFrame(FrameType type, String name, byte[] data) {
-        super(type,name);
+    public FileFrame(FrameType type, String filename, byte[] data) {
+        super(type);
+        this.name=filename;
         this.data = data;
     }
 
     @Override
     public Serializer serialize() {
-        return super.serialize().addField(data);
+        return super.serialize().addField(name).addField(data);
     }
 
     public static FileFrame deserialize(FrameType type,InputStream inputStream) throws IOException {

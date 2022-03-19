@@ -1,25 +1,18 @@
 package hu.elte.sbzbxr.phoneconnect.controller;
 
 import android.content.ComponentName;
-import android.content.ContentProvider;
-import android.content.ContentProviderClient;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.net.Uri;
-import android.os.CancellationSignal;
 import android.os.IBinder;
-import android.os.ParcelFileDescriptor;
-import android.util.Log;
-import android.webkit.MimeTypeMap;
-
-import java.io.File;
-import java.io.FileDescriptor;
-import java.io.FileNotFoundException;
 
 import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.FrameType;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.MessageFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.MessageType;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.PingMessageFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.StartRestoreMessageFrame;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 
 /**
@@ -63,7 +56,9 @@ public class ServiceController {
     private void startNotificationListening(){NotificationManager.start(mainActivity);}
     private void stopNotificationListening(){NotificationManager.stop(mainActivity);}
 
-    public void sendPing(){connectionManager.sendPing();}
+    public void sendPing(){connectionManager.sendMessage(new PingMessageFrame("Hello server"));}
+    public void askRestoreList(){connectionManager.sendMessage(new MessageFrame(MessageType.RESTORE_GET_AVAILABLE));}
+    public void requestRestore(String restoreID){connectionManager.sendMessage(new StartRestoreMessageFrame(restoreID));}
 
     private void initScreenCapture(){
         if(screenCaptureBuilder==null){screenCaptureBuilder=new ScreenCaptureBuilder(mainActivity);}
@@ -106,10 +101,15 @@ public class ServiceController {
     };
 
 
-    public void sendFile(MyFileDescriptor myFileDescriptor) {
+    public void startFileTransfer(MyFileDescriptor myFileDescriptor) {
         //Log.d("To send",myFileDescriptor.filename);
-        connectionManager.sendFile(myFileDescriptor);
+        connectionManager.sendFile(myFileDescriptor, FrameType.FILE,null);
     }
     ///document/primary:Download/PhoneConnect/kb_jk_igazolas_december30.pdf
     ///external/images/media/112
+
+    public void sendBackupFile(MyFileDescriptor myFileDescriptor,String backupId) {
+        //Log.d("To send",myFileDescriptor.filename);
+        connectionManager.sendFile(myFileDescriptor, FrameType.BACKUP_FILE,backupId);
+    }
 }

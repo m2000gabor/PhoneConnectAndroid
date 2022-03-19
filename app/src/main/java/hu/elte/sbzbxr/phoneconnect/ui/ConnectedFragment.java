@@ -26,8 +26,13 @@ import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
+import java.text.DateFormat;
+import java.util.Calendar;
+import java.util.List;
+
 import hu.elte.sbzbxr.phoneconnect.databinding.FragmentConnectedBinding;
 import hu.elte.sbzbxr.phoneconnect.model.MyUriQuery;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.FrameType;
 
 public class ConnectedFragment extends Fragment {
     private static final String TAG = ToConnectFragment.class.getName();
@@ -38,7 +43,7 @@ public class ConnectedFragment extends Fragment {
 
     @Override
     public View onCreateView(
-            LayoutInflater inflater, ViewGroup container,
+            @NonNull LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState
     ) {
 
@@ -88,14 +93,14 @@ public class ConnectedFragment extends Fragment {
 
             Log.i(TAG, "Starting screen capture");
             startScreenCaptureAndRecord(resultCode,data);
-        }else if(requestCode== REQUEST_FILE_PICKER && resultCode==Activity.RESULT_OK){
+        }else if(requestCode == REQUEST_FILE_PICKER && resultCode==Activity.RESULT_OK){
             // The result data contains a URI for the document or directory that
             // the user selected.
-            Uri uri = null;
+            Uri uri;
             if (data != null) {
                 uri = data.getData();
                 // Perform operations on the document using its URI.
-                activityCallback.getServiceController().sendFile(MyUriQuery.querySingeFile(uri,requireContext()));
+                activityCallback.getServiceController().startFileTransfer(MyUriQuery.querySingleFile(uri,requireContext()));
             }
         }
     }
@@ -120,14 +125,11 @@ public class ConnectedFragment extends Fragment {
 
 
         //Setup processes
-        binding.includedScreenSharePanel.screenShareSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if(isChecked){
-                    startStreamingClicked();
-                }else{
-                    stopScreenCaptureAndRecord();
-                }
+        binding.includedScreenSharePanel.screenShareSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if(isChecked){
+                startStreamingClicked();
+            }else{
+                stopScreenCaptureAndRecord();
             }
         });
 
@@ -169,9 +171,7 @@ public class ConnectedFragment extends Fragment {
     }
 
     //media actions
-    private void restoreMedia(){
-        throw new UnsupportedOperationException("This function has not been implemented yet");
-    }
+    private void restoreMedia(){ activityCallback.getServiceController().askRestoreList(); }
 
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
@@ -187,24 +187,14 @@ public class ConnectedFragment extends Fragment {
         requestAccess();
     }
 
-    private void showConfirmationDialog(Runnable confirm, Runnable cancel){
+    private void showConfirmationDialog(Runnable confirm, Runnable cancel,String message){
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         // Add the buttons
-        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int id) {
-                // User clicked OK button
-                confirm.run();
-            }
-        });
-        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int id) {
-                // User cancelled the dialog
-                cancel.run();
-            }
-            });
+        builder.setPositiveButton("OK", (dialog, id) -> {confirm.run(); });
+        builder.setNegativeButton("Cancel", (dialog, id) -> {cancel.run(); });
 
         //other dialog params
-        builder.setMessage("This process may take hours to complete, and tranfers all of your images to you computer. ")
+        builder.setMessage(message)
                 .setTitle("Are you sure?");
 
         // Create the AlertDialog
@@ -216,13 +206,15 @@ public class ConnectedFragment extends Fragment {
         //ContentResolver contentResolver = requireActivity().getContentResolver();
         ContentResolver contentResolver = requireActivity().getApplicationContext().getContentResolver();
         //ContentResolver contentResolver = getContext().getContentResolver();
+        String backupID = DateFormat.getDateTimeInstance().format(Calendar.getInstance().getTime())
+                .replace(':','_').replace(' ','_');
 
         new Thread(() ->
                     MyUriQuery.queryDirectory(contentResolver,
                             MediaStore.Images.Media.EXTERNAL_CONTENT_URI,MediaStore.Images.Media._ID).
                     stream().
                     limit(2).
-                    forEach(myFileDescriptor -> activityCallback.getServiceController().sendFile(myFileDescriptor))
+                    forEach(myFileDescriptor -> activityCallback.getServiceController().sendBackupFile(myFileDescriptor,backupID))
                 ).start();
     }
 
@@ -239,10 +231,28 @@ public class ConnectedFragment extends Fragment {
     }
 
     private void mediaBackupAccessGranted(){
-        showConfirmationDialog(this::backupData,()-> System.err.println("User cancelled"));
+        showConfirmationDialog(this::backupData,()-> System.err.println("User cancelled"),
+                "This process may take hours to complete, and tranfers all of your images to you computer. ");
     }
 
     public void pingSuccessful(String msg) {
         binding.receivedMessageLabel.setText(msg);
+    }
+
+    public void availableToRestore(List<String> backupList) {
+        if(backupList.isEmpty()){
+            Toast.makeText(getContext(),"There's no available backup to restore",Toast.LENGTH_SHORT).show();
+        }else{
+            showConfirmationDialog(
+                    ()->activityCallback.getServiceController().requestRestore(backupList.get(backupList.size()-1)),
+                    ()-> System.err.println("User cancelled"),
+                    "This process may take hours to complete, and restore all of your images from your backup to this phone.");
+        }
+        //todo finish this
+        /*
+        1. User click on the restore button -> send request, show dialog wth loading screen
+        2. Received list of backups -> populate dialog (This function should do this)
+        3. User selects the backup to restore -> ask the windows side to do it
+         */
     }
 }
