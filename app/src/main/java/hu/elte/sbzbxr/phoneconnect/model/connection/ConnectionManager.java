@@ -82,7 +82,7 @@ public class ConnectionManager extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         try{
-            Uri uri = (Uri) intent.getParcelableExtra(PickLocationActivity.URI_OF_FILE);
+            Uri uri = intent.getParcelableExtra(PickLocationActivity.URI_OF_FILE);
             String filename = intent.getStringExtra(FILENAME_TO_CREATE);
             if(uri !=null){
                 openOutputStream(filename,uri);
@@ -297,7 +297,10 @@ public class ConnectionManager extends Service {
         });
     }
 
+    private final ExecutorService compressToJPGExecutorService = Executors.newFixedThreadPool(4);
     public void sendScreenShot(ScreenShot screenShot) {
-        outgoingBuffer.forceInsert(new ScreenShotFrame(screenShot));
+        ScreenShotFrame screenShotFrame = new ScreenShotFrame(screenShot);
+        outgoingBuffer.forceInsert(screenShotFrame);
+        compressToJPGExecutorService.submit(screenShotFrame::transform);
     }
 }
