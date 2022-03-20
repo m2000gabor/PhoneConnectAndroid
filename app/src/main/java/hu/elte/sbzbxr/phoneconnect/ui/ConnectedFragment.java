@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 import hu.elte.sbzbxr.phoneconnect.databinding.FragmentConnectedBinding;
 import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.MyUriQuery;
+import hu.elte.sbzbxr.phoneconnect.ui.notifications.NotificationSettings;
 import hu.elte.sbzbxr.phoneconnect.ui.progress.FileTransferUI;
 
 public class ConnectedFragment extends Fragment {
@@ -130,6 +131,14 @@ public class ConnectedFragment extends Fragment {
                 startStreamingClicked();
             }else{
                 stopScreenCaptureAndRecord();
+            }
+        });
+
+        binding.includedNotificationPanel.notificationSettingsButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                NotificationSettings notificationSettings = new NotificationSettings(ConnectedFragment.this);
+                notificationSettings.showDialog();
             }
         });
 
