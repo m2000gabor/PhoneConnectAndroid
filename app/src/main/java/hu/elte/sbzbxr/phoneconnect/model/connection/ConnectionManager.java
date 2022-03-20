@@ -10,7 +10,6 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
-import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 
@@ -197,11 +196,13 @@ public class ConnectionManager extends Service {
             return;
         }
         //System.out.println("Frame arrived");
+        if(!streamProvider.contains(name)){view.getConnectedFragment().ifPresent(f->f.getArrivingFileTransfer().incomingFileTransferStarted((BackupFileFrame) fileFrame));}
         OutputStream os = streamProvider.getOutputStream(this, name);
+        view.getConnectedFragment().ifPresent(f -> f.getArrivingFileTransfer().pieceOfFileArrived(fileFrame));
         if(fileFrame.getDataLength()==0){
             final String tmp = fileFrame.name;
             Log.d(LOG_TAG,"File arrived: "+tmp);
-            view.runOnUiThread(()-> Toast.makeText(getApplicationContext(),"File arrived: "+tmp,Toast.LENGTH_SHORT).show());
+            view.getConnectedFragment().ifPresent(f->f.getArrivingFileTransfer().incomingFileTransferStopped(fileFrame, true));
             streamProvider.endOfFileStreaming(name);
         }else{
             writeThisFrame(os,fileFrame);
@@ -292,9 +293,30 @@ public class ConnectionManager extends Service {
         Log.d(LOG_TAG,"Would send the following file: "+ myFileDescriptor.filename);
         fileCutterExecutorService.submit(()->{
             FileCutter cutter = new FileCutter(myFileDescriptor,getContentResolver(),fileType,backupId);
+
+            //notify ui that file sending started
+            if(fileType==FrameType.BACKUP_FILE || fileType==FrameType.FILE ){
+                if(!cutter.isEnd()){
+                    view.getConnectedFragment().ifPresent(f -> {
+                        f.getSendingFileTransfer().incomingFileTransferStarted(fileType,myFileDescriptor.filename, myFileDescriptor.size);});
+                }
+            }
+
+            //sending
             while (!cutter.isEnd()){
                 outgoingBuffer.forceInsert(cutter.current());
+
+                //notify ui that a piece of file sent
+                if(fileType==FrameType.BACKUP_FILE || fileType==FrameType.FILE ){
+                    view.getConnectedFragment().ifPresent(f -> {f.getSendingFileTransfer().pieceOfFileArrived(cutter.current());});
+                }
+
                 cutter.next();
+            }
+
+            //notify ui that file sending completed
+            if(fileType==FrameType.BACKUP_FILE || fileType==FrameType.FILE ){
+                view.getConnectedFragment().ifPresent(f -> {f.getSendingFileTransfer().incomingFileTransferStopped(cutter.current(), false);});
             }
         });
     }

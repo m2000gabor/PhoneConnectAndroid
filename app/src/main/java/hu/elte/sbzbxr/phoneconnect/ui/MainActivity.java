@@ -15,11 +15,15 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 
+import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import hu.elte.sbzbxr.phoneconnect.R;
 import hu.elte.sbzbxr.phoneconnect.controller.ServiceController;
 import hu.elte.sbzbxr.phoneconnect.databinding.ActivityMainBinding;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.FileFrame;
 
 public class MainActivity extends AppCompatActivity implements MainActivityCallback {
     public static final String IP_ADDRESS = "ipAddress";
@@ -132,7 +136,7 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
         return serviceController;
     }
 
-    public void availableToRestore(List<String> backupList) {
+    public void availableToRestore(ArrayList<AbstractMap.SimpleImmutableEntry<String, Long>> backupList) {
         ConnectedFragment f = (ConnectedFragment) getSupportFragmentManager().findFragmentByTag(CONNECTED_FRAGMENT_TAG);
         if(f != null) f.availableToRestore(backupList);
     }
@@ -140,5 +144,9 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    public Optional<ConnectedFragment> getConnectedFragment(){
+        return Optional.ofNullable((ConnectedFragment) getSupportFragmentManager().findFragmentByTag(CONNECTED_FRAGMENT_TAG));
     }
 }

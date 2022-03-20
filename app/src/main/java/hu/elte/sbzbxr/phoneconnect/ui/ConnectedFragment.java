@@ -5,7 +5,6 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ContentResolver;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.projection.MediaProjectionManager;
@@ -16,7 +15,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.CompoundButton;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -27,12 +25,16 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import java.text.DateFormat;
+import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import hu.elte.sbzbxr.phoneconnect.databinding.FragmentConnectedBinding;
+import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.MyUriQuery;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.FrameType;
+import hu.elte.sbzbxr.phoneconnect.ui.progress.FileTransferUI;
 
 public class ConnectedFragment extends Fragment {
     private static final String TAG = ToConnectFragment.class.getName();
@@ -40,6 +42,8 @@ public class ConnectedFragment extends Fragment {
     private static final int REQUEST_FILE_PICKER = 2;
     private FragmentConnectedBinding binding;
     private MainActivityCallback activityCallback;
+    private FileTransferUI arrivingFileTransfer;
+    private FileTransferUI sendingFileTransfer;
 
     @Override
     public View onCreateView(
@@ -72,6 +76,8 @@ public class ConnectedFragment extends Fragment {
         }else{
             showConnectedUI(null,null);
         }
+        arrivingFileTransfer=new FileTransferUI(this,binding.includedFileArrivingPanel);
+        sendingFileTransfer=new FileTransferUI(this,binding.includedFileSendingPanel);
     }
 
     @Override
@@ -112,17 +118,11 @@ public class ConnectedFragment extends Fragment {
         }
 
         //setup buttons
-        binding.sendFilesButton.setText("Send files");
-        binding.sendFilesButton.setOnClickListener(v ->{
-                    showFilePickerDialog();
-                }
-        );
-
+        binding.sendFilesButton.setOnClickListener(v -> showFilePickerDialog());
         binding.pingButton.setOnClickListener(v -> activityCallback.getServiceController().sendPing());
-
         binding.saveMediaActionButton.setOnClickListener(v -> onBackupMediaClicked());
         binding.restoreMediaActionButton.setOnClickListener(v -> restoreMedia());
-
+        binding.disconnectButton.setOnClickListener(v -> activityCallback.getServiceController().disconnectFromServer());
 
         //Setup processes
         binding.includedScreenSharePanel.screenShareSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -133,7 +133,23 @@ public class ConnectedFragment extends Fragment {
             }
         });
 
-        binding.disconnectButton.setOnClickListener(v -> activityCallback.getServiceController().disconnectFromServer());
+        binding.includedFileSendingPanel.filesSendingLayoutHome.setVisibility(View.GONE);
+        binding.includedFileSendingPanel.progressBar.setMax(100);
+        binding.includedFileSendingPanel.sendOrArriveLabel.setText("Sending:");
+        binding.includedFileSendingPanel.stopButton.setOnClickListener((view)->stopSending());
+
+        binding.includedFileArrivingPanel.filesSendingLayoutHome.setVisibility(View.GONE);
+        binding.includedFileArrivingPanel.progressBar.setMax(100);
+        binding.includedFileArrivingPanel.sendOrArriveLabel.setText("Saving:");
+        binding.includedFileArrivingPanel.stopButton.setOnClickListener((view)->stopSaving());
+    }
+
+    private void stopSending(){
+
+    }
+
+    private void stopSaving(){
+
     }
 
     public void showFilePickerDialog(){
@@ -209,13 +225,16 @@ public class ConnectedFragment extends Fragment {
         String backupID = DateFormat.getDateTimeInstance().format(Calendar.getInstance().getTime())
                 .replace(':','_').replace(' ','_');
 
-        new Thread(() ->
-                    MyUriQuery.queryDirectory(contentResolver,
-                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,MediaStore.Images.Media._ID).
-                    stream().
-                    limit(2).
-                    forEach(myFileDescriptor -> activityCallback.getServiceController().sendBackupFile(myFileDescriptor,backupID))
-                ).start();
+        new Thread(() ->{
+                List<MyFileDescriptor> files = new ArrayList<>(MyUriQuery.queryDirectory(contentResolver,
+                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI, MediaStore.Images.Media._ID)).
+                        stream().
+                        limit(2).
+                        collect(Collectors.toList());
+                int totalSize=files.stream().map(d->d.size).reduce(0, Integer::sum);
+                getSendingFileTransfer().initFolder(backupID, (long) totalSize);
+                files.forEach(myFileDescriptor -> activityCallback.getServiceController().sendBackupFile(myFileDescriptor,backupID));
+        }).start();
     }
 
     private void requestAccess(){
@@ -232,19 +251,23 @@ public class ConnectedFragment extends Fragment {
 
     private void mediaBackupAccessGranted(){
         showConfirmationDialog(this::backupData,()-> System.err.println("User cancelled"),
-                "This process may take hours to complete, and tranfers all of your images to you computer. ");
+                "This process may take hours to complete, and transfers all of your images to you computer. ");
     }
 
     public void pingSuccessful(String msg) {
-        binding.receivedMessageLabel.setText(msg);
+        Toast.makeText(getContext(),msg,Toast.LENGTH_SHORT).show();
     }
 
-    public void availableToRestore(List<String> backupList) {
+    public void availableToRestore(ArrayList<AbstractMap.SimpleImmutableEntry<String, Long>> backupList) {
         if(backupList.isEmpty()){
             Toast.makeText(getContext(),"There's no available backup to restore",Toast.LENGTH_SHORT).show();
         }else{
             showConfirmationDialog(
-                    ()->activityCallback.getServiceController().requestRestore(backupList.get(backupList.size()-1)),
+                    ()->{
+                        AbstractMap.SimpleImmutableEntry<String, Long> chosenBackup = backupList.get(backupList.size()-1);
+                        activityCallback.getServiceController().requestRestore(chosenBackup.getKey());
+                        arrivingFileTransfer.initFolder(chosenBackup.getKey(),chosenBackup.getValue());
+                    },
                     ()-> System.err.println("User cancelled"),
                     "This process may take hours to complete, and restore all of your images from your backup to this phone.");
         }
@@ -254,5 +277,14 @@ public class ConnectedFragment extends Fragment {
         2. Received list of backups -> populate dialog (This function should do this)
         3. User selects the backup to restore -> ask the windows side to do it
          */
+    }
+
+
+    public FileTransferUI getArrivingFileTransfer() {
+        return arrivingFileTransfer;
+    }
+
+    public FileTransferUI getSendingFileTransfer() {
+        return sendingFileTransfer;
     }
 }

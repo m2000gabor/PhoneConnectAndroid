@@ -4,16 +4,17 @@ import hu.elte.sbzbxr.phoneconnect.model.connection.items.Deserializer;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.Serializer;
 
 import java.io.*;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-//version 2.0
+//version 2.2
 public class RestorePostMessageFrame extends MessageFrame{
-    private final ArrayList<String> backups;
+    private final ArrayList<AbstractMap.SimpleImmutableEntry<String,Long>> backups; //folder name, size in bytes
 
-    public RestorePostMessageFrame(ArrayList<String> backups) {
+    public RestorePostMessageFrame(ArrayList<AbstractMap.SimpleImmutableEntry<String,Long>> backups) {
         super(MessageType.RESTORE_POST_AVAILABLE);
         this.backups = backups;
     }
@@ -34,18 +35,23 @@ public class RestorePostMessageFrame extends MessageFrame{
         Deserializer deserializer = new Deserializer(inputStream);
         byte[] array = deserializer.getByteArray();
         try (ObjectInputStream objectInputStream = new ObjectInputStream(new ByteArrayInputStream(array))){
-            ArrayList<String> strings= (ArrayList<String>) objectInputStream.readObject();
+            ArrayList<AbstractMap.SimpleImmutableEntry<String,Long>> strings =
+                    (ArrayList<AbstractMap.SimpleImmutableEntry<String,Long>>) objectInputStream.readObject();
             return new RestorePostMessageFrame(strings);
         }catch (IOException | ClassNotFoundException e){
             return new RestorePostMessageFrame(null);
         }
     }
 
-    public static List<String> getBackupList(String msg){
-        return Arrays.stream(msg.split(";;;")).collect(Collectors.toList());
+    public List<String> getNames(){
+        return backups.stream().map(AbstractMap.SimpleImmutableEntry::getKey).collect(Collectors.toList());
     }
 
-    public List<String> getBackups(){
-        return new ArrayList<>(backups);
+    public List<Long> getFolderSizes(){
+        return backups.stream().map(AbstractMap.SimpleImmutableEntry::getValue).collect(Collectors.toList());
+    }
+
+    public ArrayList<AbstractMap.SimpleImmutableEntry<String, Long>> getBackups() {
+        return backups;
     }
 }

@@ -7,8 +7,8 @@ import java.io.InputStream;
 public class BackupFileFrame extends FileFrame{
     public final String folderName;
 
-    public BackupFileFrame(FrameType type, String filename, byte[] data, String folderName) {
-        super(type, filename, data);
+    public BackupFileFrame(FrameType type, String filename,int totalSize, byte[] data, String folderName) {
+        super(type, filename, totalSize, data);
         if(folderName==null) {folderName="";}
         this.folderName = folderName;
     }
@@ -20,6 +20,6 @@ public class BackupFileFrame extends FileFrame{
 
     public static BackupFileFrame deserialize(FrameType type, InputStream inputStream) throws IOException {
         Deserializer deserializer = new Deserializer(inputStream);
-        return new BackupFileFrame(type,deserializer.getString(),deserializer.getByteArray(), deserializer.getString());
+        return new BackupFileFrame(type,deserializer.getString(), deserializer.getInt(), deserializer.getByteArray(), deserializer.getString());
     }
 }

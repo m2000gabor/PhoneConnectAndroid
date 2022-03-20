@@ -25,6 +25,12 @@ public class Serializer {
         return this;
     }
 
+    public Serializer addField(int i) {
+        byte[] arr = ByteBuffer.allocate(4).putInt(i).array();
+        for(byte b : arr) outputStream.write(b);
+        return this;
+    }
+
     public byte[] getAsBytes(){
         return outputStream.toByteArray();
     }

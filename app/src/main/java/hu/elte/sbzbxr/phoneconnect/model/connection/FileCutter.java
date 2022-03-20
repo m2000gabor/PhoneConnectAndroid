@@ -12,7 +12,7 @@ import hu.elte.sbzbxr.phoneconnect.model.connection.items.FileFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.FrameType;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.SegmentFrame;
 
-//version: 1.4
+//version: 1.5
 public class FileCutter {
     private static final int FILE_FRAME_MAX_SIZE=32000;//in bytes
     private final InputStream inputStream;
@@ -22,12 +22,14 @@ public class FileCutter {
     private FileFrame current;
     private final FrameType fileType;
     private final String backupID;
+    private final int fileTotalSize;
 
     public FileCutter(MyFileDescriptor myFileDescriptor, ContentResolver contentResolver,FrameType type, String backupID){
         this.fileType=type;
         this.backupID=backupID;
         InputStream inputStream1;
         filename = myFileDescriptor.filename;// + "." + myFileDescriptor.fileExtension;
+        fileTotalSize = myFileDescriptor.size;
         try  {
             inputStream1 = contentResolver.openInputStream(myFileDescriptor.uri);
         } catch (IOException e) {
@@ -66,10 +68,10 @@ public class FileCutter {
                 switch (fileType){
                     case BACKUP_FILE:
                     case RESTORE_FILE:
-                        current = new BackupFileFrame(fileType,filename,byteArrayOutputStream.toByteArray(),backupID);
+                        current = new BackupFileFrame(fileType,filename,fileTotalSize,byteArrayOutputStream.toByteArray(),backupID);
                         break;
                     case FILE:
-                        current = new FileFrame(fileType,filename,byteArrayOutputStream.toByteArray());
+                        current = new FileFrame(fileType,filename,fileTotalSize,byteArrayOutputStream.toByteArray());
                         break;
                     case SEGMENT:
                         current = new SegmentFrame(filename,byteArrayOutputStream.toByteArray(),backupID);
@@ -88,8 +90,8 @@ public class FileCutter {
 
     private FileFrame getEndOfFileFrame(){
         switch (fileType){
-            default:return new FileFrame(fileType,filename,new byte[0]);
-            case BACKUP_FILE: return new BackupFileFrame(fileType,filename,new byte[0],backupID);
+            default:return new FileFrame(fileType,filename,0,new byte[0]);
+            case BACKUP_FILE: return new BackupFileFrame(fileType,filename,0,new byte[0],backupID);
             case SEGMENT: return new SegmentFrame(filename,new byte[0],backupID);
         }
     }

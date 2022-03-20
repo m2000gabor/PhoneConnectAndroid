@@ -11,7 +11,7 @@ public class FrameTest {
 
     @Test
     public void basicFileFrameTest() throws IOException {
-        FileFrame before = new FileFrame(FrameType.FILE,"filename","data".getBytes());
+        FileFrame before = new FileFrame(FrameType.FILE,"filename","data".getBytes().length,"data".getBytes());
         byte[] transformed = before.serialize().getAsBytes();
         ByteArrayInputStream inputStream = new ByteArrayInputStream(transformed);
         FrameType readType = NetworkFrameCreator.getType(inputStream); //readType
@@ -26,7 +26,7 @@ public class FrameTest {
 
     @Test
     public void basicBackupFrameTest() throws IOException {
-        BackupFileFrame before = new BackupFileFrame(FrameType.FILE,"filename","data".getBytes(),"folderName");
+        BackupFileFrame before = new BackupFileFrame(FrameType.FILE,"filename","data".getBytes().length,"data".getBytes(),"folderName");
         byte[] transformed = before.serialize().getAsBytes();
         ByteArrayInputStream inputStream = new ByteArrayInputStream(transformed);
         FrameType readType = NetworkFrameCreator.getType(inputStream); //readType
