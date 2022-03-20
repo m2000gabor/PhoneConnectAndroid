@@ -6,6 +6,7 @@ import android.content.DialogInterface;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ListView;
 
 import androidx.annotation.NonNull;
@@ -39,6 +40,16 @@ public class NotificationDialog extends DialogFragment {
 
         MyListAdapter adapter = new MyListAdapter(requireActivity(),notificationPairs);
         listView.setAdapter(adapter);
+
+        ((Button) customView.findViewById(R.id.selectAllButton)).setOnClickListener((v)->{
+            notificationPairs.forEach(pair -> pair.enabled=true);
+            adapter.notifyDataSetChanged();
+        });
+
+        ((Button) customView.findViewById(R.id.unselectAllButton)).setOnClickListener((v)->{
+            notificationPairs.forEach(pair -> pair.enabled=false);
+            adapter.notifyDataSetChanged();
+        });
 
         // Inflate and set the layout for the dialog
         // Pass null as the parent view because its going in the dialog layout

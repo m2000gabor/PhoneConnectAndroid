@@ -22,15 +22,7 @@ public class NotificationSettings implements SaveList {
 
     public NotificationSettings(ConnectedFragment connectedFragment) {
         this.connectedFragment=connectedFragment;
-
-        final PackageManager pm = connectedFragment.requireActivity().getPackageManager();
-        List<ApplicationInfo> packages = pm.getInstalledApplications(PackageManager.GET_META_DATA);
-        List<CharSequence> appNames = packages.stream().map(pm::getApplicationLabel).collect(Collectors.toList());
-        List<String> storedExceptions = getDisabledNotifications();
-        notificationPairs = new ArrayList<>(appNames.size());
-        for(CharSequence ch : appNames){
-            notificationPairs.add(new NotificationPair(ch.toString(),!storedExceptions.contains(ch.toString())));
-        }
+        notificationPairs = new ArrayList<>(200);
     }
 
     private List<String> getDisabledNotifications(){
@@ -50,10 +42,16 @@ public class NotificationSettings implements SaveList {
 
     //From: https://developer.android.com/guide/topics/ui/dialogs#AddingAList
     public void showDialog() {
-
-        //get a list of installed apps.
-
-        //harSequence[] installedApps = packages.stream().map(p->p.packageName).collect(Collectors.toList()).toArray(new CharSequence[0]);
+        LoadingDialog loadingDialog = new LoadingDialog();
+        loadingDialog.show(connectedFragment.getParentFragmentManager(),"loading");
+        final PackageManager pm = connectedFragment.requireActivity().getPackageManager();
+        List<ApplicationInfo> packages = pm.getInstalledApplications(PackageManager.GET_META_DATA);
+        List<CharSequence> appNames = packages.stream().map(pm::getApplicationLabel).collect(Collectors.toList());
+        List<String> storedExceptions = getDisabledNotifications();
+        for(CharSequence ch : appNames){
+            notificationPairs.add(new NotificationPair(ch.toString(),!storedExceptions.contains(ch.toString())));
+        }
+        loadingDialog.dismiss();
         new NotificationDialog(notificationPairs,this).show(connectedFragment.getParentFragmentManager(),"notificationSettings");
     }
 

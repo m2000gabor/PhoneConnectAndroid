@@ -138,7 +138,7 @@ public class ConnectedFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 NotificationSettings notificationSettings = new NotificationSettings(ConnectedFragment.this);
-                notificationSettings.showDialog();
+                new Thread(notificationSettings::showDialog).start();
             }
         });
 
