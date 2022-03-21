@@ -16,8 +16,6 @@
         android:text="Notification forwarding"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        android:checked="true"
-        android:enabled="false"
         app:switchPadding="15dp" />
 
 

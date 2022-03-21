@@ -111,11 +111,16 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
     }
 
     public void afterDisconnect(){
-        FragmentManager fragmentManager = getSupportFragmentManager();
-        fragmentManager.beginTransaction()
-                .replace(FRAGMENT_CONTAINER_ID, ToConnectFragment.class, null ,TO_CONNECT_FRAGMENT_TAG)
-                .setReorderingAllowed(true)
-                .commit();
+        try {
+            FragmentManager fragmentManager = getSupportFragmentManager();
+            fragmentManager.beginTransaction()
+                    .replace(FRAGMENT_CONTAINER_ID, ToConnectFragment.class, null, TO_CONNECT_FRAGMENT_TAG)
+                    .setReorderingAllowed(true)
+                    .commit();
+        }catch (IllegalStateException e){
+            e.printStackTrace();
+            Log.e(TAG,"Activity is paused or destroyed");
+        }
     }
 
 

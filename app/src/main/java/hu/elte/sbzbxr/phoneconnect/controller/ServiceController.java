@@ -53,8 +53,8 @@ public class ServiceController {
         connectionManager.disconnect();
     }
 
-    private void startNotificationListening(){NotificationManager.start(mainActivity);}
-    private void stopNotificationListening(){NotificationManager.stop(mainActivity);}
+    public void startNotificationListening(){NotificationManager.start(mainActivity);}
+    public void stopNotificationListening(){NotificationManager.stop(mainActivity);}
 
     public void sendPing(){connectionManager.sendMessage(new PingMessageFrame("Hello server"));}
     public void askRestoreList(){connectionManager.sendMessage(new MessageFrame(MessageType.RESTORE_GET_AVAILABLE));}
@@ -90,7 +90,7 @@ public class ServiceController {
             connectionManager = binder.getService();
             connectionManager.setActivity(mainActivity);
             connectionManagerIsBound = true;
-            startNotificationListening();
+            //startNotificationListening();
         }
 
         @Override

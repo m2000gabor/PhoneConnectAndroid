@@ -275,7 +275,9 @@ public class ConnectionManager extends Service {
     }
 
     public void sendNotification(NotificationFrame n) {
-        if(n != null){
+        if(n==null){Log.d(LOG_TAG,"Cannot send >>null<< notification");return;}
+        if(!view.getConnectedFragment().isPresent() ||
+                view.getConnectedFragment().get().notificationFilter.toForward(n.appName)){
             try{
                 outgoingBuffer.forceInsert(n);
                 Log.d(LOG_TAG,"Notification queued");
@@ -283,7 +285,7 @@ public class ConnectionManager extends Service {
                 Log.e(LOG_TAG,"The notification queue is full. Cannot add latest notification.");
             }
         }else{
-            Log.d(LOG_TAG,"Cannot send >>null<< notification");
+            Log.e(LOG_TAG,"This notification is filtered out. AppName: "+n.appName);
         }
     }
 

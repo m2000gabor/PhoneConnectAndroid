@@ -15,6 +15,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CompoundButton;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -34,6 +35,7 @@ import java.util.stream.Collectors;
 import hu.elte.sbzbxr.phoneconnect.databinding.FragmentConnectedBinding;
 import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.MyUriQuery;
+import hu.elte.sbzbxr.phoneconnect.model.notification.NotificationFilter;
 import hu.elte.sbzbxr.phoneconnect.ui.notifications.NotificationSettings;
 import hu.elte.sbzbxr.phoneconnect.ui.progress.FileTransferUI;
 
@@ -45,6 +47,7 @@ public class ConnectedFragment extends Fragment {
     private MainActivityCallback activityCallback;
     private FileTransferUI arrivingFileTransfer;
     private FileTransferUI sendingFileTransfer;
+    public final NotificationFilter notificationFilter = new NotificationFilter();
 
     @Override
     public View onCreateView(
@@ -142,6 +145,14 @@ public class ConnectedFragment extends Fragment {
             }
         });
 
+        binding.includedNotificationPanel.notificationSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if(isChecked){
+                startNotificationService();
+            }else{
+                stopNotificationService();
+            }
+        });
+
         binding.includedFileSendingPanel.filesSendingLayoutHome.setVisibility(View.GONE);
         binding.includedFileSendingPanel.progressBar.setMax(100);
         binding.includedFileSendingPanel.sendOrArriveLabel.setText("Sending:");
@@ -193,6 +204,14 @@ public class ConnectedFragment extends Fragment {
 
     private void stopScreenCaptureAndRecord(){
         activityCallback.getServiceController().stopScreenCapture();
+    }
+
+    private void startNotificationService(){
+        activityCallback.getServiceController().startNotificationListening();
+    }
+
+    private void stopNotificationService(){
+        activityCallback.getServiceController().stopNotificationListening();
     }
 
     //media actions

@@ -12,7 +12,9 @@ import android.widget.ListView;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.DialogFragment;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import hu.elte.sbzbxr.phoneconnect.R;
 
@@ -21,7 +23,7 @@ public class NotificationDialog extends DialogFragment {
     private final SaveList callbackForSaving;
 
     public NotificationDialog(List<NotificationPair> notificationPairs,SaveList callbackForSaving) {
-        this.notificationPairs = notificationPairs;
+        this.notificationPairs = notificationPairs.stream().sorted(Comparator.comparing(a -> a.app)).collect(Collectors.toList());
         this.callbackForSaving = callbackForSaving;
     }
 

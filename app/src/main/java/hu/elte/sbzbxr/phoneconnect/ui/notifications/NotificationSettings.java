@@ -38,6 +38,7 @@ public class NotificationSettings implements SaveList {
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putStringSet(SET_OF_EXCEPTIONS,appsToExclude);
         editor.apply();
+        connectedFragment.notificationFilter.setAppsToExclude(appsToExclude);
     }
 
     //From: https://developer.android.com/guide/topics/ui/dialogs#AddingAList
@@ -46,7 +47,12 @@ public class NotificationSettings implements SaveList {
         loadingDialog.show(connectedFragment.getParentFragmentManager(),"loading");
         final PackageManager pm = connectedFragment.requireActivity().getPackageManager();
         List<ApplicationInfo> packages = pm.getInstalledApplications(PackageManager.GET_META_DATA);
-        List<CharSequence> appNames = packages.stream().map(pm::getApplicationLabel).collect(Collectors.toList());
+        List<CharSequence> appNames = packages.stream()
+                .filter(ai->ai.flags!=ApplicationInfo.FLAG_SYSTEM)
+                .filter(ai->ai.flags!=ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)
+                .map(pm::getApplicationLabel)
+                .distinct()
+                .collect(Collectors.toList());
         List<String> storedExceptions = getDisabledNotifications();
         for(CharSequence ch : appNames){
             notificationPairs.add(new NotificationPair(ch.toString(),!storedExceptions.contains(ch.toString())));
