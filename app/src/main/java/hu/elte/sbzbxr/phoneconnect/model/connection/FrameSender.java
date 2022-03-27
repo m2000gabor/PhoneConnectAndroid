@@ -13,17 +13,27 @@ public class FrameSender {
 
     private FrameSender() {}
 
-    public static void send(PrintStream out, NetworkFrame networkFrame) {
-        try {
-            byte[] toWrite = networkFrame.serialize().getAsBytes();
-            out.write(toWrite);
-            out.flush();
-            Log.i(LOG_TAG, networkFrame.type.toString() +" ( "+networkFrame.type.toString()+", "+ toWrite.length+" bytes) successfully sent.");
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-            Log.e(LOG_TAG,"FileNotFound");
-        } catch (IOException e) {
-            e.printStackTrace();
+    public static void send(ConnectionLimiter limiter, PrintStream out, NetworkFrame networkFrame) {
+        byte[] toWrite = networkFrame.serialize().getAsBytes();
+
+        if(limiter.hasLimit()){
+            //int i = limiter.canSend();
+            //out.write(toWrite,0,i);
+
+            for (byte b : toWrite) {
+                limiter.send(b);
+                out.write(b);
+                if(out.checkError()) break;
+            }
+        }else{
+            try {
+                out.write(toWrite);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
+
+        out.flush();
+        Log.i(LOG_TAG, networkFrame.type.toString() + " ( " + networkFrame.type.toString() + ", " + toWrite.length + " bytes) successfully sent.");
     }
 }

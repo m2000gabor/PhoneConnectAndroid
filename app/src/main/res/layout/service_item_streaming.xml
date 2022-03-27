@@ -17,12 +17,12 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <CheckBox
-        android:id="@+id/metricsCheckBox"
+        android:id="@+id/slowerNetworkCheckBox"
         android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="12dp"
-        android:text="Show metrics"
+        android:text="Limit network usage"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/screenShareSwitch" />
 
@@ -33,7 +33,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="44dp"
         android:text="Use demo source"
-        app:layout_constraintStart_toEndOf="@+id/metricsCheckBox"
-        app:layout_constraintTop_toTopOf="@+id/metricsCheckBox" />
+        app:layout_constraintStart_toEndOf="@+id/slowerNetworkCheckBox"
+        app:layout_constraintTop_toTopOf="@+id/slowerNetworkCheckBox" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

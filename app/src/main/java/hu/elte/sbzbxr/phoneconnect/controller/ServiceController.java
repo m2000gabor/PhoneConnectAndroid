@@ -9,6 +9,7 @@ import android.os.IBinder;
 import java.net.Socket;
 
 import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
+import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionLimiter;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.FrameType;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.MessageFrame;
@@ -122,6 +123,12 @@ public class ServiceController {
             return null;
         }else{
          return connectionManager.getSocket();
+        }
+    }
+
+    public void setNetworkLimit(ConnectionLimiter limiter){
+        if(connectionManager!=null){
+            connectionManager.setLimiter(limiter);
         }
     }
 }

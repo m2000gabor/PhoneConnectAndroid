@@ -15,6 +15,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CompoundButton;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -48,6 +49,7 @@ import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_RestoreListAvail
 import hu.elte.sbzbxr.phoneconnect.model.actions.helper.SingleFieldAction;
 import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_FilePieceSent;
 import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_LastPieceOfFileSent;
+import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionLimiter;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.BackupFileFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.PingMessageFrame;
 import hu.elte.sbzbxr.phoneconnect.ui.notifications.NotificationSettings;
@@ -186,6 +188,24 @@ public class ConnectedFragment extends Fragment {
                 stopScreenCaptureAndRecord();
             }
         });
+        binding.includedScreenSharePanel.slowerNetworkCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                ConnectionLimiter limiter;
+                if(isChecked){
+                    limiter=ConnectionLimiter.create(getNetworkLimit());
+                }else{
+                    limiter=ConnectionLimiter.noLimit();
+                }
+                viewModel.getServiceController().setNetworkLimit(limiter);
+            }
+        });
+        binding.includedScreenSharePanel.demoSourceCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                setSource(isChecked);
+            }
+        });
 
         binding.includedNotificationPanel.notificationSettingsButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -212,6 +232,14 @@ public class ConnectedFragment extends Fragment {
         binding.includedFileArrivingPanel.progressBar.setMax(100);
         binding.includedFileArrivingPanel.sendOrArriveLabel.setText("Saving:");
         binding.includedFileArrivingPanel.stopButton.setOnClickListener((view)->stopSaving());
+    }
+
+    private void setSource(boolean isDemo){
+
+    }
+
+    private int getNetworkLimit(){
+        return 1000000;
     }
 
     private void stopSending(){

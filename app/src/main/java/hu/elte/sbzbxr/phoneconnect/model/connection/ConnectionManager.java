@@ -59,6 +59,7 @@ public class ConnectionManager extends Service {
     private static final String LOG_TAG = "ConnectionManager";
     private boolean isListening = false;
     private boolean isSending = false;
+    private ConnectionLimiter limiter = ConnectionLimiter.noLimit();
     private Socket socket;
     private PrintStream out;
     private InputStream in;
@@ -228,11 +229,11 @@ public class ConnectionManager extends Service {
             //view.getConnectedFragment().ifPresent(f->f.getArrivingFileTransfer().incomingFileTransferStopped(fileFrame, true));
             streamProvider.endOfFileStreaming(name);
         }else{
-            writeThisFrame(os,fileFrame);
+            saveFrame(os,fileFrame);
         }
     }
 
-    private static void writeThisFrame(OutputStream os, FileFrame frame){
+    private static void saveFrame(OutputStream os, FileFrame frame){
         try {
             os.write(frame.getData());
         } catch (IOException e) {
@@ -290,11 +291,12 @@ public class ConnectionManager extends Service {
             while(isSending){
                 NetworkFrame sendable = outgoingBuffer.take();
                 if(sendable!=null){
-                    FrameSender.send(out,sendable);
+                    FrameSender.send(limiter,out,sendable);
                 }else{
                     Log.d(LOG_TAG,"Got null from buffer");
                 }
             }
+            limiter.stop();
         }).start();
     }
 
@@ -357,5 +359,11 @@ public class ConnectionManager extends Service {
 
     public Socket getSocket() {
         return socket;
+    }
+
+    public void setLimiter(ConnectionLimiter l) {
+        limiter.stop();
+        limiter = l;
+        limiter.start();
     }
 }
