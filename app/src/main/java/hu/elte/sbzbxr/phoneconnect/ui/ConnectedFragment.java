@@ -15,7 +15,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.CompoundButton;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -24,6 +23,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
 
 import java.text.DateFormat;
 import java.util.AbstractMap;
@@ -32,10 +33,23 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import hu.elte.sbzbxr.phoneconnect.controller.MainViewModel;
 import hu.elte.sbzbxr.phoneconnect.databinding.FragmentConnectedBinding;
 import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.MyUriQuery;
-import hu.elte.sbzbxr.phoneconnect.model.notification.NotificationFilter;
+import hu.elte.sbzbxr.phoneconnect.model.actions.Action_OutgoingTransferStarted;
+import hu.elte.sbzbxr.phoneconnect.model.actions.NetworkAction;
+import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_FilePieceArrived;
+import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_FirstPieceOfBackupArrived;
+import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_FirstPieceOfFileTransferArrived;
+import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_LastPieceOfFileArrived;
+import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_PingArrived;
+import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_RestoreListAvailable;
+import hu.elte.sbzbxr.phoneconnect.model.actions.helper.SingleFieldAction;
+import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_FilePieceSent;
+import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_LastPieceOfFileSent;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.BackupFileFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.PingMessageFrame;
 import hu.elte.sbzbxr.phoneconnect.ui.notifications.NotificationSettings;
 import hu.elte.sbzbxr.phoneconnect.ui.progress.FileTransferUI;
 
@@ -47,7 +61,7 @@ public class ConnectedFragment extends Fragment {
     private MainActivityCallback activityCallback;
     private FileTransferUI arrivingFileTransfer;
     private FileTransferUI sendingFileTransfer;
-    public final NotificationFilter notificationFilter = new NotificationFilter();
+    private MainViewModel viewModel;
 
     @Override
     public View onCreateView(
@@ -82,6 +96,42 @@ public class ConnectedFragment extends Fragment {
         }
         arrivingFileTransfer=new FileTransferUI(this,binding.includedFileArrivingPanel);
         sendingFileTransfer=new FileTransferUI(this,binding.includedFileSendingPanel);
+
+        viewModel = new ViewModelProvider(requireActivity()).get(MainViewModel.class);
+        viewModel.getActions().observe(getViewLifecycleOwner(), new Observer<NetworkAction>() {
+            @Override
+            public void onChanged(NetworkAction networkAction) {
+                switch (networkAction.type){
+                    case PING_ARRIVED:
+                        pingSuccessful(((Action_PingArrived) networkAction).getField());
+                        break;
+                    case BACKUP_FILE_FIRST_ARRIVED:
+                        arrivingFileTransfer.incomingFileTransferStarted(((Action_FirstPieceOfBackupArrived) networkAction).getField());
+                        break;
+                    case FILE_TRANSFER_FIRST_ARRIVED:
+                        arrivingFileTransfer.incomingFileTransferStarted(((Action_FirstPieceOfFileTransferArrived) networkAction).getField());
+                        break;
+                    case PIECE_OF_FILE_ARRIVED:
+                        arrivingFileTransfer.pieceOfFileArrived(((Action_FilePieceArrived) networkAction).getField());
+                        break;
+                    case LAST_PIECE_OF_FILE_ARRIVED:
+                        arrivingFileTransfer.pieceOfFileArrived(((Action_LastPieceOfFileArrived) networkAction).getField());
+                        break;
+                    case RESTORE_LIST_OF_AVAILABLE_BACKUPS:
+                        availableToRestore(((Action_RestoreListAvailable) networkAction).getField());
+                        break;
+                    case PIECE_OF_FILE_SENT:
+                        sendingFileTransfer.pieceOfFileArrived(((Action_FilePieceSent) networkAction).getField());
+                        break;
+                    case LAST_PIECE_OF_FILE_SENT:
+                        sendingFileTransfer.pieceOfFileArrived(((Action_LastPieceOfFileSent) networkAction).getField());
+                        break;
+                    case OUTGOING_FILE_TRANSFER_STARTED:
+                        //sendingFileTransfer.pieceOfFileArrived(((Action_OutgoingTransferStarted) networkAction).ge);
+                        break;
+                }
+            }
+        });
     }
 
     @Override
@@ -199,7 +249,7 @@ public class ConnectedFragment extends Fragment {
     }
 
     private void startScreenCaptureAndRecord(int resultCode, Intent data){
-        activityCallback.getServiceController().startScreenCapture(resultCode,data);
+        activityCallback.startScreenCapture(resultCode,data);
     }
 
     private void stopScreenCaptureAndRecord(){
@@ -207,11 +257,11 @@ public class ConnectedFragment extends Fragment {
     }
 
     private void startNotificationService(){
-        activityCallback.getServiceController().startNotificationListening();
+        activityCallback.startNotificationListening();
     }
 
     private void stopNotificationService(){
-        activityCallback.getServiceController().stopNotificationListening();
+        activityCallback.stopNotificationListening();
     }
 
     //media actions
@@ -286,7 +336,7 @@ public class ConnectedFragment extends Fragment {
         Toast.makeText(getContext(),msg,Toast.LENGTH_SHORT).show();
     }
 
-    public void availableToRestore(ArrayList<AbstractMap.SimpleImmutableEntry<String, Long>> backupList) {
+    private void availableToRestore(ArrayList<AbstractMap.SimpleImmutableEntry<String, Long>> backupList) {
         if(backupList.isEmpty()){
             Toast.makeText(getContext(),"There's no available backup to restore",Toast.LENGTH_SHORT).show();
         }else{
@@ -314,5 +364,9 @@ public class ConnectedFragment extends Fragment {
 
     public FileTransferUI getSendingFileTransfer() {
         return sendingFileTransfer;
+    }
+
+    public MainViewModel getViewModel() {
+        return viewModel;
     }
 }

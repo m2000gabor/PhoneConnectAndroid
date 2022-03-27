@@ -39,7 +39,7 @@ public class FileTransferUI {
         incomingFileTransferStarted(fileFrame.type, fileFrame.name, fileFrame.totalSize);
     }
 
-    public void incomingFileTransferStarted(FrameType type, String name, int totalSize){
+    private void incomingFileTransferStarted(FrameType type, String name, int totalSize){
         runOnUI(()->{
             binding.filesSendingLayoutHome.setVisibility(View.VISIBLE);
             if(type!=FrameType.BACKUP_FILE){folderInfo.hide();}

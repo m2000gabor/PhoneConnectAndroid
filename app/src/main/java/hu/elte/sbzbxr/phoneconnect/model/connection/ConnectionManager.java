@@ -22,7 +22,19 @@ import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import hu.elte.sbzbxr.phoneconnect.controller.MainViewModel;
 import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
+import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_FirstPieceOfBackupArrived;
+import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_FilePieceArrived;
+import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_FirstPieceOfFileTransferArrived;
+import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_LastPieceOfFileArrived;
+import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_PingArrived;
+import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_RestoreListAvailable;
+import hu.elte.sbzbxr.phoneconnect.model.actions.helper.*;
+import hu.elte.sbzbxr.phoneconnect.model.actions.*;
+import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.Action_NetworkStateConnected;
+import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_FilePieceSent;
+import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_LastPieceOfFileSent;
 import hu.elte.sbzbxr.phoneconnect.model.connection.buffer.OutgoingBuffer2;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.BackupFileFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.FileFrame;
@@ -36,7 +48,6 @@ import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.MessageFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.PingMessageFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.items.ScreenShotFrame;
 import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenShot;
-import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 import hu.elte.sbzbxr.phoneconnect.ui.PickLocationActivity;
 
 /**
@@ -51,8 +62,8 @@ public class ConnectionManager extends Service {
     private Socket socket;
     private PrintStream out;
     private InputStream in;
-    private MainActivity view;//todo remove this
     private final OutgoingBuffer2 outgoingBuffer=new OutgoingBuffer2();
+    private MainViewModel viewModel;
 
     private final IBinder binder = new LocalBinder();
 
@@ -76,8 +87,9 @@ public class ConnectionManager extends Service {
     //Empty ctor is required for a Service.
     public ConnectionManager() {}
 
-    public void setActivity(MainActivity mainActivity){this.view=mainActivity;}
-
+    public void setViewModel(MainViewModel mainViewModel){
+        this.viewModel=mainViewModel;
+    }
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         try{
@@ -125,7 +137,7 @@ public class ConnectionManager extends Service {
             in.close();
             out.close();
             socket.close();
-            view.afterDisconnect();
+            viewModel.postAction(new NetworkAction(ActionType.JUST_DISCONNECTED));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -144,7 +156,7 @@ public class ConnectionManager extends Service {
         in=i;
         out=o;
         if(successful){
-            view.connectedTo(ip,port);
+            viewModel.postAction(new Action_NetworkStateConnected(ip,port));
             if (out == null) {
                 System.err.println("But its null!!");
             }
@@ -154,7 +166,7 @@ public class ConnectionManager extends Service {
             listen();
             startSendingThread();
         }else{
-            view.showFailMessage("Could not establish the connection!");
+            viewModel.postAction(new Action_FailMessage("Could not establish the connection!"));
         }
     }
 
@@ -188,6 +200,14 @@ public class ConnectionManager extends Service {
         }).start();
     }
 
+    private static void newFileStartingPieceArrived(FileFrame fileFrame,MainViewModel viewModel){
+        if(fileFrame.type==FrameType.BACKUP_FILE){
+            viewModel.postAction(new Action_FirstPieceOfBackupArrived((BackupFileFrame) fileFrame));
+        }else if(fileFrame.type==FrameType.FILE){
+            viewModel.postAction(new Action_FirstPieceOfFileTransferArrived(fileFrame));
+        }
+    }
+
     private final FileOutputStreamProvider streamProvider = new FileOutputStreamProvider();
     private void fileArrived(FileFrame fileFrame) {
         String name = fileFrame.name;
@@ -195,14 +215,17 @@ public class ConnectionManager extends Service {
             Log.e(LOG_TAG,"This frame doesn't have a name");
             return;
         }
-        //System.out.println("Frame arrived");
-        if(!streamProvider.contains(name)){view.getConnectedFragment().ifPresent(f->f.getArrivingFileTransfer().incomingFileTransferStarted((BackupFileFrame) fileFrame));}
+
+        if(!streamProvider.contains(name)){newFileStartingPieceArrived(fileFrame,viewModel);}
+
         OutputStream os = streamProvider.getOutputStream(this, name);
-        view.getConnectedFragment().ifPresent(f -> f.getArrivingFileTransfer().pieceOfFileArrived(fileFrame));
+        viewModel.postAction(new Action_FilePieceArrived(fileFrame));
+        //view.getConnectedFragment().ifPresent(f -> f.getArrivingFileTransfer().pieceOfFileArrived(fileFrame));
         if(fileFrame.getDataLength()==0){
             final String tmp = fileFrame.name;
             Log.d(LOG_TAG,"File arrived: "+tmp);
-            view.getConnectedFragment().ifPresent(f->f.getArrivingFileTransfer().incomingFileTransferStopped(fileFrame, true));
+            viewModel.postAction(new Action_LastPieceOfFileArrived(fileFrame));
+            //view.getConnectedFragment().ifPresent(f->f.getArrivingFileTransfer().incomingFileTransferStopped(fileFrame, true));
             streamProvider.endOfFileStreaming(name);
         }else{
             writeThisFrame(os,fileFrame);
@@ -248,17 +271,18 @@ public class ConnectionManager extends Service {
     }
 
     private void restoreFolderListArrived(RestorePostMessageFrame messageFrame){
+        viewModel.postAction(new Action_RestoreListAvailable(messageFrame.getBackups()));
+        System.out.println("Available restores arrived! ");
+        /*
         view.runOnUiThread(() -> {
             view.availableToRestore(messageFrame.getBackups());
-            System.out.println("Available restores arrived! ");
-        });
+        });*/
     }
 
     private void pingArrived(PingMessageFrame messageFrame){
-        view.runOnUiThread(() -> {
-            view.successfulPing(messageFrame.message);
-            System.out.println("Successful ping! \nReceived message: "+ messageFrame.message);
-        });
+        viewModel.postAction(new Action_PingArrived(messageFrame.message));
+        //view.successfulPing(messageFrame.message);
+        System.out.println("Successful ping! \nReceived message: "+ messageFrame.message);
     }
 
     private void startSendingThread(){
@@ -276,8 +300,7 @@ public class ConnectionManager extends Service {
 
     public void sendNotification(NotificationFrame n) {
         if(n==null){Log.d(LOG_TAG,"Cannot send >>null<< notification");return;}
-        if(!view.getConnectedFragment().isPresent() ||
-                view.getConnectedFragment().get().notificationFilter.toForward(n.appName)){
+        if(viewModel.notificationFilter.toForward(n.appName)){
             try{
                 outgoingBuffer.forceInsert(n);
                 Log.d(LOG_TAG,"Notification queued");
@@ -299,8 +322,8 @@ public class ConnectionManager extends Service {
             //notify ui that file sending started
             if(fileType==FrameType.BACKUP_FILE || fileType==FrameType.FILE ){
                 if(!cutter.isEnd()){
-                    view.getConnectedFragment().ifPresent(f -> {
-                        f.getSendingFileTransfer().incomingFileTransferStarted(fileType,myFileDescriptor.filename, myFileDescriptor.size);});
+                    viewModel.postAction(new Action_OutgoingTransferStarted(myFileDescriptor.filename, myFileDescriptor.size));
+                    //f.getSendingFileTransfer().incomingFileTransferStarted(fileType,myFileDescriptor.filename, myFileDescriptor.size);};
                 }
             }
 
@@ -310,7 +333,8 @@ public class ConnectionManager extends Service {
 
                 //notify ui that a piece of file sent
                 if(fileType==FrameType.BACKUP_FILE || fileType==FrameType.FILE ){
-                    view.getConnectedFragment().ifPresent(f -> {f.getSendingFileTransfer().pieceOfFileArrived(cutter.current());});
+                    viewModel.postAction(new Action_FilePieceSent(cutter.current()));
+                    //view.getConnectedFragment().ifPresent(f -> {f.getSendingFileTransfer().pieceOfFileArrived(cutter.current());});
                 }
 
                 cutter.next();
@@ -318,7 +342,8 @@ public class ConnectionManager extends Service {
 
             //notify ui that file sending completed
             if(fileType==FrameType.BACKUP_FILE || fileType==FrameType.FILE ){
-                view.getConnectedFragment().ifPresent(f -> {f.getSendingFileTransfer().incomingFileTransferStopped(cutter.current(), false);});
+                viewModel.postAction(new Action_LastPieceOfFileSent(cutter.current()));
+                //view.getConnectedFragment().ifPresent(f -> {f.getSendingFileTransfer().incomingFileTransferStopped(cutter.current(), false);});
             }
         });
     }
@@ -328,5 +353,9 @@ public class ConnectionManager extends Service {
         ScreenShotFrame screenShotFrame = new ScreenShotFrame(screenShot);
         outgoingBuffer.forceInsert(screenShotFrame);
         compressToJPGExecutorService.submit(screenShotFrame::transform);
+    }
+
+    public Socket getSocket() {
+        return socket;
     }
 }

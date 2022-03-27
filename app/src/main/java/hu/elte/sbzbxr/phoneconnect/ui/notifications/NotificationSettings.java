@@ -1,6 +1,5 @@
 package hu.elte.sbzbxr.phoneconnect.ui.notifications;
 
-import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
@@ -38,7 +37,7 @@ public class NotificationSettings implements SaveList {
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putStringSet(SET_OF_EXCEPTIONS,appsToExclude);
         editor.apply();
-        connectedFragment.notificationFilter.setAppsToExclude(appsToExclude);
+        connectedFragment.getViewModel().notificationFilter.setAppsToExclude(appsToExclude);
     }
 
     //From: https://developer.android.com/guide/topics/ui/dialogs#AddingAList
