@@ -4,10 +4,10 @@ import android.net.Uri;
 
 public final class MyFileDescriptor {
     public final String filename;
-    public final int size;
+    public final long size;
     public final Uri uri;
 
-    public MyFileDescriptor(String filename, int size, Uri uri) {
+    public MyFileDescriptor(String filename, Long size, Uri uri) {
         this.filename = filename;
         this.size = size;
         this.uri = uri;

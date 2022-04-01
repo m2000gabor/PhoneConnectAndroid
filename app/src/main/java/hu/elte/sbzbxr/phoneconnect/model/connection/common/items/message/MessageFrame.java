@@ -1,12 +1,12 @@
-package hu.elte.sbzbxr.phoneconnect.model.connection.items.message;
+package hu.elte.sbzbxr.phoneconnect.model.connection.common.items.message;
 
 import java.io.IOException;
 import java.io.InputStream;
 
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.Deserializer;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.FrameType;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.NetworkFrame;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.Serializer;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.Deserializer;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.FrameType;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.NetworkFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.Serializer;
 
 /**
  * @implNote should be the same for both Windows and Android part

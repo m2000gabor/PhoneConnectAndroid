@@ -1,18 +1,15 @@
-package hu.elte.sbzbxr.phoneconnect.model.connection;
-
-import android.content.ContentResolver;
+package hu.elte.sbzbxr.phoneconnect.model.connection.common;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.BackupFileFrame;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.FileFrame;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.FrameType;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.SegmentFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.BackupFileFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.FileFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.FrameType;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.SegmentFrame;
 
-//version: 1.5
+//version: 1.6
 public class FileCutter {
     private static final int FILE_FRAME_MAX_SIZE=32000;//in bytes
     private final InputStream inputStream;
@@ -21,22 +18,18 @@ public class FileCutter {
     private boolean isEnd=false;
     private FileFrame current;
     private final FrameType fileType;
-    private final String backupID;
-    private final int fileTotalSize;
+    private final long fileTotalSize;
+    private final String folderName;
+    private final long folderSize;
 
-    public FileCutter(MyFileDescriptor myFileDescriptor, ContentResolver contentResolver,FrameType type, String backupID){
+
+    public FileCutter(InputStream inputStream, String filename, Long fileTotalSize, FrameType type, String folderName, Long folderSize){
         this.fileType=type;
-        this.backupID=backupID;
-        InputStream inputStream1;
-        filename = myFileDescriptor.filename;// + "." + myFileDescriptor.fileExtension;
-        fileTotalSize = myFileDescriptor.size;
-        try  {
-            inputStream1 = contentResolver.openInputStream(myFileDescriptor.uri);
-        } catch (IOException e) {
-            inputStream1 =null;
-            e.printStackTrace();
-        }
-        inputStream = inputStream1;
+        this.folderName = folderName;
+        this.folderSize = folderSize;
+        this.filename = filename;
+        this.fileTotalSize = fileTotalSize;
+        this.inputStream = inputStream;
         next();
     }
 
@@ -68,13 +61,13 @@ public class FileCutter {
                 switch (fileType){
                     case BACKUP_FILE:
                     case RESTORE_FILE:
-                        current = new BackupFileFrame(fileType,filename,fileTotalSize,byteArrayOutputStream.toByteArray(),backupID);
+                        current = new BackupFileFrame(fileType,filename,fileTotalSize,byteArrayOutputStream.toByteArray(), folderName,folderSize);
                         break;
                     case FILE:
-                        current = new FileFrame(fileType,filename,fileTotalSize,byteArrayOutputStream.toByteArray());
+                        current = new FileFrame(fileType,filename,fileTotalSize,byteArrayOutputStream.toByteArray(), null, 0L);
                         break;
                     case SEGMENT:
-                        current = new SegmentFrame(filename,byteArrayOutputStream.toByteArray(),backupID);
+                        current = new SegmentFrame(filename,byteArrayOutputStream.toByteArray(), folderName);
                         break;
                 }
             }
@@ -90,9 +83,9 @@ public class FileCutter {
 
     private FileFrame getEndOfFileFrame(){
         switch (fileType){
-            default:return new FileFrame(fileType,filename,0,new byte[0]);
-            case BACKUP_FILE: return new BackupFileFrame(fileType,filename,0,new byte[0],backupID);
-            case SEGMENT: return new SegmentFrame(filename,new byte[0],backupID);
+            default:return new FileFrame(fileType,filename,0L,new byte[0], folderName, folderSize);
+            case BACKUP_FILE: return new BackupFileFrame(fileType,filename, 0L,new byte[0], folderName, folderSize);
+            case SEGMENT: return new SegmentFrame(filename,new byte[0], folderName);
         }
     }
 }

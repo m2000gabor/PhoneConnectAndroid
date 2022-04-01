@@ -1,12 +1,11 @@
-package hu.elte.sbzbxr.phoneconnect.model.connection.items.message;
+package hu.elte.sbzbxr.phoneconnect.model.connection.common.items.message;
 
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.Deserializer;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.Serializer;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.Deserializer;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.Serializer;
 
 import java.io.*;
 import java.util.AbstractMap;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 

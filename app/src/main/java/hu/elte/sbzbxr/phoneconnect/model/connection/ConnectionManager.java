@@ -24,9 +24,7 @@ import java.util.concurrent.Executors;
 
 import hu.elte.sbzbxr.phoneconnect.controller.MainViewModel;
 import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
-import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_FirstPieceOfBackupArrived;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_FilePieceArrived;
-import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_FirstPieceOfFileTransferArrived;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_LastPieceOfFileArrived;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_PingArrived;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_RestoreListAvailable;
@@ -36,17 +34,17 @@ import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.Action_NetworkStat
 import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_FilePieceSent;
 import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_LastPieceOfFileSent;
 import hu.elte.sbzbxr.phoneconnect.model.connection.buffer.OutgoingBuffer2;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.BackupFileFrame;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.FileFrame;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.FrameType;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.RestorePostMessageFrame;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.MessageType;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.NetworkFrame;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.NetworkFrameCreator;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.NotificationFrame;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.MessageFrame;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.PingMessageFrame;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.ScreenShotFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.BackupFileFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.FileCutter;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.FileFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.FrameType;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.message.RestorePostMessageFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.message.MessageType;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.NetworkFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.NetworkFrameCreator;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.NotificationFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.message.MessageFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.message.PingMessageFrame;
 import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenShot;
 import hu.elte.sbzbxr.phoneconnect.ui.PickLocationActivity;
 
@@ -201,35 +199,24 @@ public class ConnectionManager extends Service {
         }).start();
     }
 
-    private static void newFileStartingPieceArrived(FileFrame fileFrame,MainViewModel viewModel){
-        if(fileFrame.type==FrameType.BACKUP_FILE){
-            viewModel.postAction(new Action_FirstPieceOfBackupArrived((BackupFileFrame) fileFrame));
-        }else if(fileFrame.type==FrameType.FILE){
-            viewModel.postAction(new Action_FirstPieceOfFileTransferArrived(fileFrame));
-        }
-    }
-
     private final FileOutputStreamProvider streamProvider = new FileOutputStreamProvider();
     private void fileArrived(FileFrame fileFrame) {
-        String name = fileFrame.name;
+        String name = fileFrame.filename;
         if(name==null) {
             Log.e(LOG_TAG,"This frame doesn't have a name");
             return;
         }
 
-        if(!streamProvider.contains(name)){newFileStartingPieceArrived(fileFrame,viewModel);}
-
         OutputStream os = streamProvider.getOutputStream(this, name);
-        viewModel.postAction(new Action_FilePieceArrived(fileFrame));
-        //view.getConnectedFragment().ifPresent(f -> f.getArrivingFileTransfer().pieceOfFileArrived(fileFrame));
         if(fileFrame.getDataLength()==0){
-            final String tmp = fileFrame.name;
+            final String tmp = fileFrame.filename;
             Log.d(LOG_TAG,"File arrived: "+tmp);
             viewModel.postAction(new Action_LastPieceOfFileArrived(fileFrame));
             //view.getConnectedFragment().ifPresent(f->f.getArrivingFileTransfer().incomingFileTransferStopped(fileFrame, true));
             streamProvider.endOfFileStreaming(name);
         }else{
             saveFrame(os,fileFrame);
+            viewModel.postAction(new Action_FilePieceArrived(fileFrame));
         }
     }
 
@@ -316,28 +303,17 @@ public class ConnectionManager extends Service {
 
 
     private final ExecutorService fileCutterExecutorService = Executors.newSingleThreadExecutor();
-    public void sendFile(MyFileDescriptor myFileDescriptor, FrameType fileType, String backupId){
+    public void sendFile(MyFileDescriptor myFileDescriptor, FrameType fileType, String backupId, long folderSize){
         Log.d(LOG_TAG,"Would send the following file: "+ myFileDescriptor.filename);
         fileCutterExecutorService.submit(()->{
-            FileCutter cutter = new FileCutter(myFileDescriptor,getContentResolver(),fileType,backupId);
-
-            //notify ui that file sending started
-            if(fileType==FrameType.BACKUP_FILE || fileType==FrameType.FILE ){
-                if(!cutter.isEnd()){
-                    viewModel.postAction(new Action_OutgoingTransferStarted(myFileDescriptor.filename, myFileDescriptor.size));
-                    //f.getSendingFileTransfer().incomingFileTransferStarted(fileType,myFileDescriptor.filename, myFileDescriptor.size);};
-                }
-            }
+            FileCutter cutter = FileCutterCreator.create(myFileDescriptor,getContentResolver(),fileType, backupId,folderSize);
 
             //sending
             while (!cutter.isEnd()){
                 outgoingBuffer.forceInsert(cutter.current());
 
                 //notify ui that a piece of file sent
-                if(fileType==FrameType.BACKUP_FILE || fileType==FrameType.FILE ){
-                    viewModel.postAction(new Action_FilePieceSent(cutter.current()));
-                    //view.getConnectedFragment().ifPresent(f -> {f.getSendingFileTransfer().pieceOfFileArrived(cutter.current());});
-                }
+                viewModel.postAction(new Action_FilePieceSent(cutter.current()));
 
                 cutter.next();
             }
@@ -345,7 +321,6 @@ public class ConnectionManager extends Service {
             //notify ui that file sending completed
             if(fileType==FrameType.BACKUP_FILE || fileType==FrameType.FILE ){
                 viewModel.postAction(new Action_LastPieceOfFileSent(cutter.current()));
-                //view.getConnectedFragment().ifPresent(f -> {f.getSendingFileTransfer().incomingFileTransferStopped(cutter.current(), false);});
             }
         });
     }

@@ -1,4 +1,4 @@
-package hu.elte.sbzbxr.phoneconnect.model.connection.items;
+package hu.elte.sbzbxr.phoneconnect.model.connection;
 
 import static hu.elte.sbzbxr.phoneconnect.model.recording.ScreenShot.JPEG_QUALITY;
 
@@ -8,10 +8,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.FrameType;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.NetworkFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.SegmentFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.Serializer;
 import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenShot;
 
 //version 2.0
-public class ScreenShotFrame extends NetworkFrame{
+public class ScreenShotFrame extends NetworkFrame {
     private final transient ScreenShot screenShot;
     private final String folderName;
     private SegmentFrame segmentFrame = null;

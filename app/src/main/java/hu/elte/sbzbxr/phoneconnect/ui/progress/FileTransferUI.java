@@ -1,94 +1,106 @@
 package hu.elte.sbzbxr.phoneconnect.ui.progress;
 
 import android.view.View;
-import android.widget.Toast;
+
+import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import hu.elte.sbzbxr.phoneconnect.databinding.ServiceItemFileSendingBinding;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.BackupFileFrame;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.FileFrame;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.FrameType;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.FileFrame;
 import hu.elte.sbzbxr.phoneconnect.ui.ConnectedFragment;
 
 public class FileTransferUI {
     private final ConnectedFragment connectedFragment;
     private final ServiceItemFileSendingBinding binding;
-
-    //only for folders
-    private final FolderInfo folderInfo;
-    private final FileProgressInfo fileInfo;
+    private final ConcurrentHashMap<String,FrameProgressInfo> map; //<id,FileSize>
 
 
     public FileTransferUI(ConnectedFragment connectedFragment, ServiceItemFileSendingBinding binding) {
         this.connectedFragment = connectedFragment;
         this.binding = binding;
-        folderInfo = new FolderInfo(binding);
-        fileInfo = new FileProgressInfo(binding);
+        map = new ConcurrentHashMap<>();
     }
 
+    public void pieceOfFile(FileFrame frame){
+        final String key = getMapKey(frame);
+        if(!map.containsKey(key)){
+            map.put(key,new FrameProgressInfo(frame.folderName, frame.filename, frame.folderSize, frame.getFileSize(), 0,0));
+        }
 
-    public void initFolder(String folderName, Long folderTotalSize){
-        runOnUI(()->folderInfo.start(folderName,folderTotalSize.intValue()));
+        final FrameProgressInfo info = map.get(key);
+        if(info.getFileSize()==-1){
+            info.setFilename(frame.filename);
+            info.setFileSize(frame.getFileSize());
+        }
+
+        info.arrived(frame.getDataLength());
+
+        refreshUI();
     }
 
-    public void incomingFileTransferStarted(FileFrame fileFrame){
-        incomingFileTransferStarted(fileFrame.type, fileFrame.name, fileFrame.totalSize);
-    }
-
-    public void incomingFileTransferStarted(BackupFileFrame fileFrame){
-        folderInfo.start(fileFrame.folderName,fileFrame.totalSize);
-        incomingFileTransferStarted(fileFrame.type, fileFrame.name, fileFrame.totalSize);
-    }
-
-    private void incomingFileTransferStarted(FrameType type, String name, int totalSize){
+    private void refreshUI() {
         runOnUI(()->{
-            binding.filesSendingLayoutHome.setVisibility(View.VISIBLE);
-            if(type!=FrameType.BACKUP_FILE){folderInfo.hide();}
-            fileInfo.start(name,totalSize);
-        });
-    }
+            if(!map.isEmpty()){
+                map.entrySet().stream().filter(e->e.getValue().getFileSize()>=0).limit(1).forEach(e->{
+                    final FrameProgressInfo info = e.getValue();
+                    binding.filesSendingLayoutHome.setVisibility(View.VISIBLE);
 
-    public void pieceOfFileArrived(FileFrame fileFrame) {
-        runOnUI(()-> {
-            try {
-                if (fileFrame.type == FrameType.FILE) {
-                    fileInfo.frameArrived(fileFrame);
-                } else if (fileFrame.type == FrameType.RESTORE_FILE || fileFrame.type == FrameType.BACKUP_FILE) {
-                    folderInfo.frameArrived((BackupFileFrame) fileFrame);
-                    fileInfo.frameArrived(fileFrame);
-                }
-            } catch (NoSuchFieldException e) {
-                System.err.println("Unexpected file arrived, cleared UI");
-                incomingFileTransferStarted(fileFrame);
+                    if(info.hasFolder()){
+                        final int percentage = getPercentage(info.getArrivedBytesFromFolder(),info.getFolderSize());
+                        binding.totalProgressBar.setProgress(percentage);
+                        binding.totalProgressBarLabel.setText(percentage+"%");
+                        binding.arrivingFileLinearLayout3Total.setVisibility(View.VISIBLE);
+                    }else{
+                        binding.arrivingFileLinearLayout3Total.setVisibility(View.GONE);
+                    }
+
+                    final int percentage = getPercentage(info.getArrivedBytesFromFile(),info.getFileSize());
+                    binding.progressBar.setProgress(percentage);
+                    binding.progressBarLabel.setText(percentage+"%");
+                    binding.filenameTextView.setText(info.getFilename());
+                    binding.progressBar.setVisibility(View.VISIBLE);
+                });
+            }else{
+                binding.filesSendingLayoutHome.setVisibility(View.GONE);
             }
         });
     }
 
-    public void incomingFileTransferStopped(FileFrame fileFrame, boolean isIncoming){
-        if(isIncoming){
-            connectedFragment.requireActivity().runOnUiThread(()-> {
-                Toast.makeText(connectedFragment.getContext(),"File arrived: "+fileFrame.name,Toast.LENGTH_SHORT).show();
-            });
+
+    public void endOfFile(FileFrame frame){
+        final FrameProgressInfo info = map.remove(getMapKey(frame));
+        if(info==null) return;
+
+        if(info.hasFolder()){
+            map.put(getMapKey(frame),new FrameProgressInfo(
+                    info.getFolderName(),"",info.getFolderSize(),
+                    -1,0,info.getArrivedBytesFromFolder()));
         }
 
-        if(folderInfo.isFinished() && fileInfo.isFinished()){
-            runOnUI(()->binding.stopButton.setVisibility(View.GONE));
 
-            new Thread(()->{
-                try {
-                    Thread.sleep(5000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                if(folderInfo.isFinished() && fileInfo.isFinished()){
-                    runOnUI(()->binding.filesSendingLayoutHome.setVisibility(View.GONE));
-                }
-            }).start();
+        new Thread(()->{
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            refreshUI();
+        }).start();
+
+        System.out.println("file fully arrived: "+ frame.filename);
+    }
+
+    private static String getMapKey(FileFrame frame){
+        if(frame.filename==null || frame.folderName.equals("")){
+            return frame.filename;
+        }else{
+            return frame.folderName;
         }
     }
 
-    static String getPercentage(int actual,int total){
-        int percentage =(int) Math.round(100*((double)actual/ (double) total));
-        return percentage + "%";
+
+    private static int getPercentage(long actual, long total){
+        return (int) Math.ceil(100*((double)actual/ (double) total));
     }
 
     void runOnUI(Runnable f){

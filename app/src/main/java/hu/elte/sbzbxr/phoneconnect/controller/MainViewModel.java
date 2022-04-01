@@ -73,8 +73,12 @@ public class MainViewModel extends AndroidViewModel {
     }
 
     public void postAction(NetworkAction action){
-        if(action instanceof NetworkStateAction) postNetworkAction((NetworkStateAction) action);
-        incomeAction.postValue(action);
+        if(action instanceof NetworkStateAction){
+            postNetworkAction((NetworkStateAction) action);
+        }else{
+            incomeAction.postValue(action);
+        }
+
     }
 
     private void postNetworkAction(NetworkStateAction action){

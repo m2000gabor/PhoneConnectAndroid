@@ -2,11 +2,10 @@ package hu.elte.sbzbxr.phoneconnect.model.connection;
 
 import android.util.Log;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.NetworkFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.NetworkFrame;
 
 public class FrameSender {
     private static final String LOG_TAG = "MyFrameSender";

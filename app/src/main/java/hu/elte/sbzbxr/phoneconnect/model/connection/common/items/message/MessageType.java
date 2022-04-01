@@ -1,4 +1,4 @@
-package hu.elte.sbzbxr.phoneconnect.model.connection.items.message;
+package hu.elte.sbzbxr.phoneconnect.model.connection.common.items.message;
 
 //Version: 1.1
 public enum MessageType {

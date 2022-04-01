@@ -11,11 +11,11 @@ import java.net.Socket;
 import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionLimiter;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.FrameType;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.MessageFrame;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.MessageType;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.PingMessageFrame;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.StartRestoreMessageFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.FrameType;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.message.MessageFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.message.MessageType;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.message.PingMessageFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.message.StartRestoreMessageFrame;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 
 /**
@@ -104,14 +104,14 @@ public class ServiceController {
 
     public void startFileTransfer(MyFileDescriptor myFileDescriptor) {
         //Log.d("To send",myFileDescriptor.filename);
-        connectionManager.sendFile(myFileDescriptor, FrameType.FILE,null);
+        connectionManager.sendFile(myFileDescriptor, FrameType.FILE,null,0);
     }
     ///document/primary:Download/PhoneConnect/kb_jk_igazolas_december30.pdf
     ///external/images/media/112
 
-    public void sendBackupFile(MyFileDescriptor myFileDescriptor,String backupId) {
+    public void sendBackupFile(MyFileDescriptor myFileDescriptor,String backupId, Long folderSize) {
         //Log.d("To send",myFileDescriptor.filename);
-        connectionManager.sendFile(myFileDescriptor, FrameType.BACKUP_FILE,backupId);
+        connectionManager.sendFile(myFileDescriptor, FrameType.BACKUP_FILE,backupId,folderSize);
     }
 
     /**

@@ -12,7 +12,7 @@ import android.service.notification.StatusBarNotification;
 import android.util.Log;
 
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.NotificationFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.NotificationFrame;
 
 public class MyNotificationListenerService extends NotificationListenerService {
     private static final String LOG_TAG = "NotificationListener";

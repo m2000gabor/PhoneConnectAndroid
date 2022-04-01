@@ -1,10 +1,10 @@
-package hu.elte.sbzbxr.phoneconnect.model.connection.items.message;
+package hu.elte.sbzbxr.phoneconnect.model.connection.common.items.message;
 
 import java.io.IOException;
 import java.io.InputStream;
 
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.Deserializer;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.Serializer;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.Deserializer;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.Serializer;
 
 public class StartRestoreMessageFrame extends MessageFrame{
     public final String backupId;

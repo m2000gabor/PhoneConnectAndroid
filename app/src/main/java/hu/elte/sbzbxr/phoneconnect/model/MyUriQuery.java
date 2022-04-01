@@ -22,7 +22,7 @@ public class MyUriQuery {
             int sizeIndex = returnCursor.getColumnIndex(OpenableColumns.SIZE);
             returnCursor.moveToFirst();
             String name = returnCursor.getString(nameIndex);
-            int size = returnCursor.getInt(sizeIndex);
+            long size = returnCursor.getLong(sizeIndex);
             ret = new MyFileDescriptor(name, size, uri);
         }
         return ret;
@@ -53,7 +53,7 @@ public class MyUriQuery {
                 // Get values of columns for a given video.
                 long id = cursor.getLong(idColumn);
                 String name = cursor.getString(nameColumn);
-                int size = cursor.getInt(sizeColumn);
+                long size = cursor.getLong(sizeColumn);
 
                 Uri contentUri = ContentUris.withAppendedId(
                         collection, id);

@@ -38,20 +38,14 @@ import hu.elte.sbzbxr.phoneconnect.controller.MainViewModel;
 import hu.elte.sbzbxr.phoneconnect.databinding.FragmentConnectedBinding;
 import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.MyUriQuery;
-import hu.elte.sbzbxr.phoneconnect.model.actions.Action_OutgoingTransferStarted;
 import hu.elte.sbzbxr.phoneconnect.model.actions.NetworkAction;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_FilePieceArrived;
-import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_FirstPieceOfBackupArrived;
-import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_FirstPieceOfFileTransferArrived;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_LastPieceOfFileArrived;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_PingArrived;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_RestoreListAvailable;
-import hu.elte.sbzbxr.phoneconnect.model.actions.helper.SingleFieldAction;
 import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_FilePieceSent;
 import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_LastPieceOfFileSent;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionLimiter;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.BackupFileFrame;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.message.PingMessageFrame;
 import hu.elte.sbzbxr.phoneconnect.ui.notifications.NotificationSettings;
 import hu.elte.sbzbxr.phoneconnect.ui.progress.FileTransferUI;
 
@@ -107,29 +101,20 @@ public class ConnectedFragment extends Fragment {
                     case PING_ARRIVED:
                         pingSuccessful(((Action_PingArrived) networkAction).getField());
                         break;
-                    case BACKUP_FILE_FIRST_ARRIVED:
-                        arrivingFileTransfer.incomingFileTransferStarted(((Action_FirstPieceOfBackupArrived) networkAction).getField());
-                        break;
-                    case FILE_TRANSFER_FIRST_ARRIVED:
-                        arrivingFileTransfer.incomingFileTransferStarted(((Action_FirstPieceOfFileTransferArrived) networkAction).getField());
-                        break;
                     case PIECE_OF_FILE_ARRIVED:
-                        arrivingFileTransfer.pieceOfFileArrived(((Action_FilePieceArrived) networkAction).getField());
+                        arrivingFileTransfer.pieceOfFile(((Action_FilePieceArrived) networkAction).getField());
                         break;
                     case LAST_PIECE_OF_FILE_ARRIVED:
-                        arrivingFileTransfer.pieceOfFileArrived(((Action_LastPieceOfFileArrived) networkAction).getField());
+                        arrivingFileTransfer.endOfFile(((Action_LastPieceOfFileArrived) networkAction).getField());
                         break;
                     case RESTORE_LIST_OF_AVAILABLE_BACKUPS:
                         availableToRestore(((Action_RestoreListAvailable) networkAction).getField());
                         break;
                     case PIECE_OF_FILE_SENT:
-                        sendingFileTransfer.pieceOfFileArrived(((Action_FilePieceSent) networkAction).getField());
+                        sendingFileTransfer.pieceOfFile(((Action_FilePieceSent) networkAction).getField());
                         break;
                     case LAST_PIECE_OF_FILE_SENT:
-                        sendingFileTransfer.pieceOfFileArrived(((Action_LastPieceOfFileSent) networkAction).getField());
-                        break;
-                    case OUTGOING_FILE_TRANSFER_STARTED:
-                        //sendingFileTransfer.pieceOfFileArrived(((Action_OutgoingTransferStarted) networkAction).ge);
+                        sendingFileTransfer.endOfFile(((Action_LastPieceOfFileSent) networkAction).getField());
                         break;
                 }
             }
@@ -337,9 +322,8 @@ public class ConnectedFragment extends Fragment {
                         stream().
                         limit(2).
                         collect(Collectors.toList());
-                int totalSize=files.stream().map(d->d.size).reduce(0, Integer::sum);
-                getSendingFileTransfer().initFolder(backupID, (long) totalSize);
-                files.forEach(myFileDescriptor -> activityCallback.getServiceController().sendBackupFile(myFileDescriptor,backupID));
+                long totalSize=files.stream().map(d->d.size).reduce(0L, Long::sum);
+                files.forEach(myFileDescriptor -> activityCallback.getServiceController().sendBackupFile(myFileDescriptor,backupID,totalSize));
         }).start();
     }
 
@@ -372,7 +356,6 @@ public class ConnectedFragment extends Fragment {
                     ()->{
                         AbstractMap.SimpleImmutableEntry<String, Long> chosenBackup = backupList.get(backupList.size()-1);
                         activityCallback.getServiceController().requestRestore(chosenBackup.getKey());
-                        arrivingFileTransfer.initFolder(chosenBackup.getKey(),chosenBackup.getValue());
                     },
                     ()-> System.err.println("User cancelled"),
                     "This process may take hours to complete, and restore all of your images from your backup to this phone.");
