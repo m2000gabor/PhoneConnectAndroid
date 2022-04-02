@@ -5,7 +5,7 @@ import java.io.InputStream;
 
 /**
  * @implNote should be the same for both Windows and Android part
- * @version 1.2
+ * @version 1.3
  */
 public class NotificationFrame extends NetworkFrame{
     public final String title;
@@ -14,6 +14,10 @@ public class NotificationFrame extends NetworkFrame{
 
     public NotificationFrame(CharSequence title, CharSequence text, CharSequence appName) {
         this(String.valueOf(title),String.valueOf(text),String.valueOf(appName));
+    }
+
+    public NotificationFrame(String title, String text) {
+        this("",text,title);
     }
 
     public NotificationFrame(String title, String text, String appName) {
