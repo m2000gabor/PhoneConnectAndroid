@@ -19,6 +19,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.Socket;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -132,10 +133,9 @@ public class ConnectionManager extends Service {
         try {
             isListening =false;
             isSending =false;
-            if(in==null || out==null || socket==null){return;}
-            in.close();
-            out.close();
-            socket.close();
+            if(in!=null) in.close();
+            if(out!=null) out.close();
+            if(socket!=null) socket.close();
             viewModel.postAction(new NetworkAction(ActionType.JUST_DISCONNECTED));
         } catch (IOException e) {
             e.printStackTrace();
