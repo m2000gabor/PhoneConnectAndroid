@@ -3,7 +3,10 @@ package hu.elte.sbzbxr.phoneconnect.ui.progress;
 import android.view.View;
 
 import java.util.HashMap;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import hu.elte.sbzbxr.phoneconnect.databinding.ServiceItemFileSendingBinding;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.FileFrame;
@@ -12,69 +15,85 @@ import hu.elte.sbzbxr.phoneconnect.ui.ConnectedFragment;
 public class FileTransferUI {
     private final ConnectedFragment connectedFragment;
     private final ServiceItemFileSendingBinding binding;
-    private final ConcurrentHashMap<String,FrameProgressInfo> map; //<id,FileSize>
+    private final Map<String,FrameProgressInfo> map; //<id,FileSize>
+    private final Queue<String> arrived; //use getSetId()
 
 
     public FileTransferUI(ConnectedFragment connectedFragment, ServiceItemFileSendingBinding binding) {
         this.connectedFragment = connectedFragment;
         this.binding = binding;
-        map = new ConcurrentHashMap<>();
+        map = new HashMap<>();
+        arrived = new ConcurrentLinkedQueue<>();
     }
 
     public void pieceOfFile(FileFrame frame){
+        if(previouslyCompleted(frame)) return;
+
         final String key = getMapKey(frame);
-        if(!map.containsKey(key)){
-            map.put(key,new FrameProgressInfo(frame.folderName, frame.filename, frame.folderSize, frame.getFileSize(), 0,0));
-        }
+        synchronized (map){
+            if(!map.containsKey(key)){
+                map.put(key,FrameProgressInfo.newFolder(frame.folderName, frame.filename, frame.folderSize, frame.getFileSize()));
+            }
 
-        final FrameProgressInfo info = map.get(key);
-        if(info.getFileSize()==-1){
-            info.setFilename(frame.filename);
-            info.setFileSize(frame.getFileSize());
-        }
+            FrameProgressInfo info = map.get(key);
+            if(info.isFileArrived() && !info.isFolderArrived()){
+                map.put(key,FrameProgressInfo.startNextFile(frame.folderName, frame.filename, frame.folderSize, frame.getFileSize(),info.getArrivedBytesFromFolder()));
+            }
 
-        info.arrived(frame.getDataLength());
+            info = map.get(key);
+            map.put(key,FrameProgressInfo.updateProgress(info, frame.getDataLength()));
+        }
 
         refreshUI();
     }
 
-    private void refreshUI() {
+    private boolean previouslyCompleted(FileFrame frame){
+        return arrived.contains(getSetId(frame));
+    }
+
+    private void refreshUI() {;
+        Optional<Map.Entry<String, FrameProgressInfo>> optional;
+        synchronized (map){
+            optional =  map.entrySet().stream().filter(e->!e.getValue().isFileArrived()).findFirst();
+        }
+
         runOnUI(()->{
-            if(!map.isEmpty()){
-                map.entrySet().stream().filter(e->e.getValue().getFileSize()>=0).limit(1).forEach(e->{
-                    final FrameProgressInfo info = e.getValue();
-                    binding.filesSendingLayoutHome.setVisibility(View.VISIBLE);
-
-                    if(info.hasFolder()){
-                        final int percentage = getPercentage(info.getArrivedBytesFromFolder(),info.getFolderSize());
-                        binding.totalProgressBar.setProgress(percentage);
-                        binding.totalProgressBarLabel.setText(percentage+"%");
-                        binding.arrivingFileLinearLayout3Total.setVisibility(View.VISIBLE);
-                    }else{
-                        binding.arrivingFileLinearLayout3Total.setVisibility(View.GONE);
-                    }
-
-                    final int percentage = getPercentage(info.getArrivedBytesFromFile(),info.getFileSize());
-                    binding.progressBar.setProgress(percentage);
-                    binding.progressBarLabel.setText(percentage+"%");
-                    binding.filenameTextView.setText(info.getFilename());
-                    binding.progressBar.setVisibility(View.VISIBLE);
-                });
-            }else{
+            if(!optional.isPresent()){
                 binding.filesSendingLayoutHome.setVisibility(View.GONE);
+            }else{
+                final FrameProgressInfo info = optional.get().getValue();
+                binding.filesSendingLayoutHome.setVisibility(View.VISIBLE);
+
+                if(info.hasFolder()){
+                    final int percentage = getPercentage(info.getArrivedBytesFromFolder(),info.getFolderSize());
+                    binding.totalProgressBar.setProgress(percentage);
+                    binding.totalProgressBarLabel.setText(percentage+"%");
+                    binding.arrivingFileLinearLayout3Total.setVisibility(View.VISIBLE);
+                }else{
+                    binding.arrivingFileLinearLayout3Total.setVisibility(View.GONE);
+                }
+
+                final int percentage = getPercentage(info.getArrivedBytesFromFile(),info.getFileSize());
+                binding.progressBar.setProgress(percentage);
+                binding.progressBarLabel.setText(percentage+"%");
+                binding.filenameTextView.setText(info.getFilename());
+                binding.progressBar.setVisibility(View.VISIBLE);
             }
         });
     }
 
 
     public void endOfFile(FileFrame frame){
-        final FrameProgressInfo info = map.remove(getMapKey(frame));
-        if(info==null) return;
+        arrived.add(getSetId(frame));
+        FrameProgressInfo info;
 
-        if(info.hasFolder()){
-            map.put(getMapKey(frame),new FrameProgressInfo(
-                    info.getFolderName(),"",info.getFolderSize(),
-                    -1,0,info.getArrivedBytesFromFolder()));
+        synchronized (map){
+            info = map.remove(getMapKey(frame));
+            if(info==null) return;
+
+            if(info.hasFolder()){
+                map.put(getMapKey(frame),FrameProgressInfo.arrivedLastPiece(info));
+            }
         }
 
 
@@ -84,6 +103,7 @@ public class FileTransferUI {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+            arrived.remove(getSetId(info.getFolderName(),info.getFilename()));
             refreshUI();
         }).start();
 
@@ -96,6 +116,19 @@ public class FileTransferUI {
         }else{
             return frame.folderName;
         }
+    }
+
+    private static String getSetId(FileFrame frame){
+        return getSetId(frame.folderName,frame.filename);
+    }
+
+    private static String getSetId(String folderName, String filename){
+        String folderPart=folderName;
+        String filePart= filename;
+        if(filePart==null) filePart="";
+        if(folderPart==null) folderPart="";
+
+        return folderPart + "/" + filePart;
     }
 
 
