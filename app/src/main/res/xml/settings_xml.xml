@@ -1,22 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <SwitchPreferenceCompat
+    <SwitchPreference
+        android:defaultValue="false"
         app:key="connectionType"
         app:title="Use different connection type"/>
 
     <Preference
+        android:defaultValue="false"
         app:key="notification"
         app:title="Select notification to send"
-        app:summary="Report technical issues or suggest new features"/>
+        app:summary="Report technical issues or suggest new features">
+    </Preference>
 
-    <SeekBarPreference
-        app:key="networkSpeed"
-        app:title="Limit network speed"
-        app:min="0"
-        app:defaultValue="100"
-        app:showSeekBarValue="true"
-        />
+    <EditTextPreference
+        android:defaultValue="100"
+        android:digits="0123456789."
+        android:inputType="numberDecimal"
+        android:key="network_speed"
+        android:selectAllOnFocus="true"
+        android:singleLine="true"
+        android:title="Network speed limit (in KB/s)" />
+
 
 </PreferenceScreen>
