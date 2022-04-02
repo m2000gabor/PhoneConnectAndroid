@@ -37,7 +37,10 @@ public class ServiceController {
     }
 
     public void startScreenCapture(int resultCode, Intent data, MainActivity mainActivity){initScreenCapture(mainActivity);screenCaptureBuilder.start(resultCode,data);}
-    public void stopScreenCapture(){if(screenCaptureBuilder != null) screenCaptureBuilder.stop();}
+    public void stopScreenCapture(){
+        if(screenCaptureBuilder != null) screenCaptureBuilder.stop();
+        connectionManager.sendMessage(new MessageFrame(MessageType.END_OF_STREAM));
+    }
 
     public boolean connectToServer(String ip, int port){
         boolean valid =validate_ip_port();
