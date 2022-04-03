@@ -2,26 +2,38 @@
 <PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <SwitchPreference
-        android:defaultValue="false"
-        app:key="connectionType"
-        app:title="Use different connection type"/>
-
-    <Preference
-        android:defaultValue="false"
-        app:key="notification"
-        app:title="Select notification to send"
-        app:summary="Report technical issues or suggest new features">
-    </Preference>
-
     <EditTextPreference
-        android:defaultValue="100"
+        android:defaultValue="@string/default_network_speed"
+        android:key="@string/network_speed"
         android:digits="0123456789."
         android:inputType="numberDecimal"
-        android:key="network_speed"
         android:selectAllOnFocus="true"
         android:singleLine="true"
         android:title="Network speed limit (in KB/s)" />
+
+    <PreferenceCategory
+        app:key="help_category"
+        app:title="Default address">
+
+        <EditTextPreference
+            android:defaultValue="@string/default_ip_address"
+            android:key="@string/ip_address"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="Edit default ip address"
+            />
+
+        <EditTextPreference
+            android:defaultValue="@string/default_port"
+            android:key="@string/port"
+            android:digits="0123456789."
+            android:inputType="numberDecimal"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="Edit default port"
+            />
+
+    </PreferenceCategory>
 
 
 </PreferenceScreen>

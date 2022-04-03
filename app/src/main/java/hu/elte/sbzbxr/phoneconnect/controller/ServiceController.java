@@ -10,7 +10,7 @@ import java.net.Socket;
 import java.util.Collections;
 import java.util.List;
 
-import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
+import hu.elte.sbzbxr.phoneconnect.model.persistance.MyFileDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionLimiter;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.FrameType;

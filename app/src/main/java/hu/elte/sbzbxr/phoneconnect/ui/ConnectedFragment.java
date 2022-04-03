@@ -27,17 +27,15 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 
-import java.lang.reflect.Array;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
 
 import hu.elte.sbzbxr.phoneconnect.controller.MainViewModel;
 import hu.elte.sbzbxr.phoneconnect.databinding.FragmentConnectedBinding;
-import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
-import hu.elte.sbzbxr.phoneconnect.model.MyUriQuery;
+import hu.elte.sbzbxr.phoneconnect.model.persistance.MyFileDescriptor;
+import hu.elte.sbzbxr.phoneconnect.model.persistance.MyUriQuery;
 import hu.elte.sbzbxr.phoneconnect.model.actions.NetworkAction;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_FilePieceArrived;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_LastPieceOfFileArrived;

@@ -20,6 +20,7 @@ import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
 import hu.elte.sbzbxr.phoneconnect.databinding.FragmentToConnectBinding;
+import hu.elte.sbzbxr.phoneconnect.model.persistance.MyPreferenceManager;
 
 public class ToConnectFragment extends Fragment {
     private static final String TAG = ToConnectFragment.class.getName();
@@ -72,7 +73,8 @@ public class ToConnectFragment extends Fragment {
     }
 
     private void prefillEditTexts(){
-        fillEditTexts("192.168.0.134","5000");//bdh
+        fillEditTexts(MyPreferenceManager.getAddress(getContext()),MyPreferenceManager.getPort(getContext()));
+        //fillEditTexts("192.168.0.134","5000");//bdh
         //fillEditTexts("192.168.0.164","5000");//home
     }
 

@@ -24,7 +24,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import hu.elte.sbzbxr.phoneconnect.controller.MainViewModel;
-import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
+import hu.elte.sbzbxr.phoneconnect.model.persistance.MyFileDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.actions.Action_FailMessage;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_FilePieceArrived;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_LastPieceOfFileArrived;

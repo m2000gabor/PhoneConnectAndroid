@@ -1,11 +1,10 @@
-package hu.elte.sbzbxr.phoneconnect.model;
+package hu.elte.sbzbxr.phoneconnect.model.persistance;
 
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
-import android.provider.DocumentsContract;
 import android.provider.FontsContract;
 import android.provider.OpenableColumns;
 import android.webkit.MimeTypeMap;
