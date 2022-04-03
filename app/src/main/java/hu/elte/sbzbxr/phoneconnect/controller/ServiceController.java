@@ -7,6 +7,8 @@ import android.content.ServiceConnection;
 import android.os.IBinder;
 
 import java.net.Socket;
+import java.util.Collections;
+import java.util.List;
 
 import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionLimiter;
@@ -107,14 +109,14 @@ public class ServiceController {
 
     public void startFileTransfer(MyFileDescriptor myFileDescriptor) {
         //Log.d("To send",myFileDescriptor.filename);
-        connectionManager.sendFile(myFileDescriptor, FrameType.FILE,null,0);
+        connectionManager.sendFiles(Collections.singletonList(myFileDescriptor), FrameType.FILE,null,0);
     }
     ///document/primary:Download/PhoneConnect/kb_jk_igazolas_december30.pdf
     ///external/images/media/112
 
-    public void sendBackupFile(MyFileDescriptor myFileDescriptor,String backupId, Long folderSize) {
+    public void sendBackupFiles(List<MyFileDescriptor> myFileDescriptors, String backupId, Long folderSize) {
         //Log.d("To send",myFileDescriptor.filename);
-        connectionManager.sendFile(myFileDescriptor, FrameType.BACKUP_FILE,backupId,folderSize);
+        connectionManager.sendFiles(myFileDescriptors, FrameType.BACKUP_FILE,backupId,folderSize);
     }
 
     /**

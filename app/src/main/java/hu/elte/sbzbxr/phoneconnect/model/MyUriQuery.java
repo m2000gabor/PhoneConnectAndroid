@@ -5,6 +5,8 @@ import android.content.ContentUris;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
+import android.provider.DocumentsContract;
+import android.provider.FontsContract;
 import android.provider.OpenableColumns;
 import android.webkit.MimeTypeMap;
 
@@ -28,13 +30,12 @@ public class MyUriQuery {
         return ret;
     }
 
-    public static List<MyFileDescriptor> queryDirectory(ContentResolver contentResolver,
-                                                        Uri collection, String idColumnIdentifier){
+    public static List<MyFileDescriptor> queryDirectory(ContentResolver contentResolver, Uri collection){
         List<MyFileDescriptor> descriptors = new ArrayList<MyFileDescriptor>();
         //Uri collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
 
         final String[] projection = new String[] {
-                idColumnIdentifier,
+                FontsContract.Columns.FILE_ID,
                 OpenableColumns.DISPLAY_NAME,
                 OpenableColumns.SIZE
         };
@@ -45,9 +46,9 @@ public class MyUriQuery {
                 null,null,null
         )) {
             // Cache column indices.
-            int idColumn = cursor.getColumnIndexOrThrow(idColumnIdentifier);
-            int nameColumn = cursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME);
-            int sizeColumn = cursor.getColumnIndexOrThrow(OpenableColumns.SIZE);
+            int idColumn = cursor.getColumnIndexOrThrow(projection[0]);
+            int nameColumn = cursor.getColumnIndexOrThrow(projection[1]);
+            int sizeColumn = cursor.getColumnIndexOrThrow(projection[2]);
 
             while (cursor.moveToNext()) {
                 // Get values of columns for a given video.

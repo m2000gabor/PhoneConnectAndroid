@@ -1,5 +1,6 @@
 package hu.elte.sbzbxr.phoneconnect.ui.progress;
 
+import android.util.Log;
 import android.view.View;
 
 import java.util.HashMap;
@@ -107,7 +108,7 @@ public class FileTransferUI {
             refreshUI();
         }).start();
 
-        System.out.println("file fully arrived: "+ frame.filename);
+        Log.d(getClass().toString(),"End of file: "+ frame.filename);
     }
 
     private static String getMapKey(FileFrame frame){

@@ -19,33 +19,33 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.Socket;
-import java.util.Objects;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import hu.elte.sbzbxr.phoneconnect.controller.MainViewModel;
 import hu.elte.sbzbxr.phoneconnect.model.MyFileDescriptor;
+import hu.elte.sbzbxr.phoneconnect.model.actions.Action_FailMessage;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_FilePieceArrived;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_LastPieceOfFileArrived;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_PingArrived;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_RestoreListAvailable;
-import hu.elte.sbzbxr.phoneconnect.model.actions.helper.*;
-import hu.elte.sbzbxr.phoneconnect.model.actions.*;
 import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.Action_NetworkStateConnected;
+import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.Action_NetworkStateDisconnected;
 import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_FilePieceSent;
 import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_LastPieceOfFileSent;
 import hu.elte.sbzbxr.phoneconnect.model.connection.buffer.OutgoingBuffer2;
-import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.BackupFileFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.FileCutter;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.BackupFileFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.FileFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.FrameType;
-import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.message.RestorePostMessageFrame;
-import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.message.MessageType;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.NetworkFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.NetworkFrameCreator;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.NotificationFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.message.MessageFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.message.MessageType;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.message.PingMessageFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.message.RestorePostMessageFrame;
 import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenShot;
 import hu.elte.sbzbxr.phoneconnect.ui.PickLocationActivity;
 
@@ -136,7 +136,7 @@ public class ConnectionManager extends Service {
             if(in!=null) in.close();
             if(out!=null) out.close();
             if(socket!=null) socket.close();
-            viewModel.postAction(new NetworkAction(ActionType.JUST_DISCONNECTED));
+            viewModel.postAction(new Action_NetworkStateDisconnected());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -303,23 +303,23 @@ public class ConnectionManager extends Service {
 
 
     private final ExecutorService fileCutterExecutorService = Executors.newSingleThreadExecutor();
-    public void sendFile(MyFileDescriptor myFileDescriptor, FrameType fileType, String backupId, long folderSize){
-        Log.d(LOG_TAG,"Would send the following file: "+ myFileDescriptor.filename);
+    public void sendFiles(List<MyFileDescriptor> files, FrameType fileType, String backupId, long folderSize){
         fileCutterExecutorService.submit(()->{
-            FileCutter cutter = FileCutterCreator.create(myFileDescriptor,getContentResolver(),fileType, backupId,folderSize);
+            for(MyFileDescriptor myFileDescriptor : files){
+                Log.d(LOG_TAG,"Would send the following file: "+ myFileDescriptor.filename);
+                FileCutter cutter = FileCutterCreator.create(myFileDescriptor,getContentResolver(),fileType, backupId,folderSize);
 
-            //sending
-            while (!cutter.isEnd()){
-                outgoingBuffer.forceInsert(cutter.current());
+                //sending
+                while (!cutter.isEnd()){
+                    outgoingBuffer.forceInsert(cutter.current());
 
-                //notify ui that a piece of file sent
-                viewModel.postAction(new Action_FilePieceSent(cutter.current()));
+                    //notify ui that a piece of file sent
+                    viewModel.postAction(new Action_FilePieceSent(cutter.current()));
 
-                cutter.next();
-            }
+                    cutter.next();
+                }
 
-            //notify ui that file sending completed
-            if(fileType==FrameType.BACKUP_FILE || fileType==FrameType.FILE ){
+                //notify ui that file sending completed
                 viewModel.postAction(new Action_LastPieceOfFileSent(cutter.current()));
             }
         });

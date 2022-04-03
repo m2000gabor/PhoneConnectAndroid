@@ -128,12 +128,6 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
         Log.e(TAG,msg);
     }
 
-    public void successfulPing(String msg){
-        Toast.makeText(getApplicationContext(), "Ping was successful", Toast.LENGTH_SHORT).show();
-        ConnectedFragment f = (ConnectedFragment) getSupportFragmentManager().findFragmentByTag(CONNECTED_FRAGMENT_TAG);
-        if(f != null) f.pingSuccessful(msg);
-    }
-
     private void afterDisconnect(){
         try {
             FragmentManager fragmentManager = getSupportFragmentManager();

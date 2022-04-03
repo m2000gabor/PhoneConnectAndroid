@@ -14,7 +14,10 @@ public class FrameSender {
 
     public static void send(ConnectionLimiter limiter, PrintStream out, NetworkFrame networkFrame) {
         byte[] toWrite = networkFrame.serialize().getAsBytes();
-
+        if(toWrite==null){
+            Log.e(LOG_TAG,"Serialization returned null");
+            return;
+        }
         if(limiter.hasLimit()){
             //int i = limiter.canSend();
             //out.write(toWrite,0,i);
