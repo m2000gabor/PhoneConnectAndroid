@@ -1,17 +1,14 @@
 package hu.elte.sbzbxr.phoneconnect.ui;
 
-import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.ContentResolver;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.pm.PackageManager;
+import android.icu.text.DateFormat;
+import android.icu.util.Calendar;
 import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
 import android.os.Bundle;
-import android.provider.MediaStore;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -19,37 +16,53 @@ import android.view.ViewGroup;
 import android.widget.CompoundButton;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
+import androidx.documentfile.provider.DocumentFile;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
 
-import java.text.DateFormat;
-import java.util.Calendar;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
+import hu.elte.sbzbxr.phoneconnect.controller.MainViewModel;
 import hu.elte.sbzbxr.phoneconnect.databinding.FragmentConnectedBinding;
-import hu.elte.sbzbxr.phoneconnect.model.MyUriQuery;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.FrameType;
+import hu.elte.sbzbxr.phoneconnect.model.persistance.MyFileDescriptor;
+import hu.elte.sbzbxr.phoneconnect.model.persistance.MyPreferenceManager;
+import hu.elte.sbzbxr.phoneconnect.model.persistance.MyUriQuery;
+import hu.elte.sbzbxr.phoneconnect.model.actions.NetworkAction;
+import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_FilePieceArrived;
+import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_LastPieceOfFileArrived;
+import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_PingArrived;
+import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_RestoreListAvailable;
+import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_FilePieceSent;
+import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_LastPieceOfFileSent;
+import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionLimiter;
+import hu.elte.sbzbxr.phoneconnect.ui.notifications.NotificationSettings;
+import hu.elte.sbzbxr.phoneconnect.ui.progress.FileTransferUI;
 
 public class ConnectedFragment extends Fragment {
     private static final String TAG = ToConnectFragment.class.getName();
     private static final int REQUEST_MEDIA_PROJECTION = 1;
     private static final int REQUEST_FILE_PICKER = 2;
+    private static final int REQUEST_BACKUP_DIR = 3;
     private FragmentConnectedBinding binding;
     private MainActivityCallback activityCallback;
+    private FileTransferUI arrivingFileTransfer;
+    private FileTransferUI sendingFileTransfer;
+    private MainViewModel viewModel;
 
     @Override
-    public View onCreateView(
-            @NonNull LayoutInflater inflater, ViewGroup container,
-            Bundle savedInstanceState
-    ) {
-
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,Bundle savedInstanceState) {
         binding = FragmentConnectedBinding.inflate(inflater, container, false);
         return binding.getRoot();
-
     }
 
     @Override
@@ -72,6 +85,35 @@ public class ConnectedFragment extends Fragment {
         }else{
             showConnectedUI(null,null);
         }
+        arrivingFileTransfer=new FileTransferUI(this,binding.includedFileArrivingPanel);
+        sendingFileTransfer=new FileTransferUI(this,binding.includedFileSendingPanel);
+
+        viewModel = new ViewModelProvider(requireActivity()).get(MainViewModel.class);
+        viewModel.getActions().observe(getViewLifecycleOwner(), new Observer<NetworkAction>() {
+            @Override
+            public void onChanged(NetworkAction networkAction) {
+                switch (networkAction.type){
+                    case PING_ARRIVED:
+                        pingSuccessful(((Action_PingArrived) networkAction).getField());
+                        break;
+                    case PIECE_OF_FILE_ARRIVED:
+                        arrivingFileTransfer.pieceOfFile(((Action_FilePieceArrived) networkAction).getField());
+                        break;
+                    case LAST_PIECE_OF_FILE_ARRIVED:
+                        arrivingFileTransfer.endOfFile(((Action_LastPieceOfFileArrived) networkAction).getField());
+                        break;
+                    case RESTORE_LIST_OF_AVAILABLE_BACKUPS:
+                        availableToRestore(((Action_RestoreListAvailable) networkAction).getField());
+                        break;
+                    case PIECE_OF_FILE_SENT:
+                        sendingFileTransfer.pieceOfFile(((Action_FilePieceSent) networkAction).getField());
+                        break;
+                    case LAST_PIECE_OF_FILE_SENT:
+                        sendingFileTransfer.endOfFile(((Action_LastPieceOfFileSent) networkAction).getField());
+                        break;
+                }
+            }
+        });
     }
 
     @Override
@@ -112,17 +154,11 @@ public class ConnectedFragment extends Fragment {
         }
 
         //setup buttons
-        binding.sendFilesButton.setText("Send files");
-        binding.sendFilesButton.setOnClickListener(v ->{
-                    showFilePickerDialog();
-                }
-        );
-
+        binding.sendFilesButton.setOnClickListener(v -> showFilePickerDialog());
         binding.pingButton.setOnClickListener(v -> activityCallback.getServiceController().sendPing());
-
         binding.saveMediaActionButton.setOnClickListener(v -> onBackupMediaClicked());
-        binding.restoreMediaActionButton.setOnClickListener(v -> restoreMedia());
-
+        binding.restoreMediaActionButton.setOnClickListener(v -> onRestoreMediaClicked());
+        binding.disconnectButton.setOnClickListener(v -> activityCallback.getServiceController().disconnectFromServer());
 
         //Setup processes
         binding.includedScreenSharePanel.screenShareSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -132,10 +168,74 @@ public class ConnectedFragment extends Fragment {
                 stopScreenCaptureAndRecord();
             }
         });
+        binding.includedScreenSharePanel.slowerNetworkCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                ConnectionLimiter limiter;
+                if(isChecked){
+                    limiter=ConnectionLimiter.create(getNetworkLimit());
+                }else{
+                    limiter=ConnectionLimiter.noLimit();
+                }
+                viewModel.getServiceController().setNetworkLimit(limiter);
+            }
+        });
+        binding.includedScreenSharePanel.demoSourceCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                setSource(isChecked);
+            }
+        });
 
-        binding.disconnectButton.setOnClickListener(v -> activityCallback.getServiceController().disconnectFromServer());
+        binding.includedNotificationPanel.notificationSettingsButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                NotificationSettings notificationSettings = new NotificationSettings(ConnectedFragment.this);
+                new Thread(notificationSettings::showDialog).start();
+            }
+        });
+
+        binding.includedNotificationPanel.notificationSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if(isChecked){
+                startNotificationService();
+            }else{
+                stopNotificationService();
+            }
+        });
+
+        binding.includedFileSendingPanel.filesSendingLayoutHome.setVisibility(View.GONE);
+        binding.includedFileSendingPanel.progressBar.setMax(100);
+        binding.includedFileSendingPanel.sendOrArriveLabel.setText("Sending:");
+        binding.includedFileSendingPanel.stopButton.setOnClickListener((view)->stopSending());
+
+        binding.includedFileArrivingPanel.filesSendingLayoutHome.setVisibility(View.GONE);
+        binding.includedFileArrivingPanel.progressBar.setMax(100);
+        binding.includedFileArrivingPanel.sendOrArriveLabel.setText("Saving:");
+        binding.includedFileArrivingPanel.stopButton.setOnClickListener((view)->stopSaving());
     }
 
+    private void setSource(boolean isDemo){
+
+    }
+
+    private long getNetworkLimit(){
+        return MyPreferenceManager.getNetworkSpeedLimit(getContext());
+    }
+
+    private void stopSending(){
+
+    }
+
+    private void stopSaving(){
+
+    }
+
+    public void pingSuccessful(String msg) {
+        Toast.makeText(getContext(),msg,Toast.LENGTH_SHORT).show();
+    }
+
+
+    //send file functionality
     public void showFilePickerDialog(){
         //From: https://developer.android.com/training/data-storage/shared/documents-files
         // Request code for selecting a PDF document.
@@ -147,7 +247,6 @@ public class ConnectedFragment extends Fragment {
         // Optionally, specify a URI for the file that should appear in the
         // system file picker when it loads.
         //intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, pickerInitialUri);
-
         startActivityForResult(intent, REQUEST_FILE_PICKER);
     }
 
@@ -163,30 +262,141 @@ public class ConnectedFragment extends Fragment {
     }
 
     private void startScreenCaptureAndRecord(int resultCode, Intent data){
-        activityCallback.getServiceController().startScreenCapture(resultCode,data);
+        activityCallback.startScreenCapture(resultCode,data);
     }
 
     private void stopScreenCaptureAndRecord(){
         activityCallback.getServiceController().stopScreenCapture();
     }
 
+    private void startNotificationService(){
+        activityCallback.startNotificationListening();
+    }
+
+    private void stopNotificationService(){
+        activityCallback.stopNotificationListening();
+    }
+
     //media actions
-    private void restoreMedia(){ activityCallback.getServiceController().askRestoreList(); }
+    private void onBackupMediaClicked(){
+        //chooseDirectory();
+        requestAccess();
+    }
+
+    private void onRestoreMediaClicked(){ activityCallback.getServiceController().askRestoreList(); }
+
+
+/*
+    private void backupData(){
+        ContentResolver contentResolver = requireActivity().getApplicationContext().getContentResolver();
+        String backupID = DateFormat.getDateTimeInstance().format(Calendar.getInstance().getTime())
+                .replace(':','_').replace(' ','_');
+
+        new Thread(() ->{
+                List<MyFileDescriptor> files = new ArrayList<>(MyUriQuery.queryDirectory(contentResolver,
+                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI, MediaStore.Images.Media._ID)).
+                        stream().
+                        limit(2).
+                        collect(Collectors.toList());
+                long totalSize=files.stream().map(d->d.size).reduce(0L, Long::sum);
+                files.forEach(myFileDescriptor -> activityCallback.getServiceController().sendBackupFile(myFileDescriptor,backupID,totalSize));
+        }).start();
+    }
+
 
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
                 if (isGranted) {
-                    // Permission is granted. Continue the action or workflow in your app.
                     mediaBackupAccessGranted();
                 } else {
                     System.err.println("User declined");
                 }
             });
+    private void requestAccess(){
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+            mediaBackupAccessGranted();
+        }  else {
+            // You can directly ask for the permission.
+            // The registered ActivityResultCallback gets the result of this request.
+            requestPermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE);
+        }
+    }*/
 
-    private void onBackupMediaClicked(){
-        requestAccess();
+    private final ActivityResultLauncher<Intent> requestPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), new ActivityResultCallback<androidx.activity.result.ActivityResult>() {
+                @Override
+                public void onActivityResult(ActivityResult result) {
+                    Uri uri;
+                    Intent data = result.getData();
+                    if (data != null) {
+                        uri = data.getData();
+                        mediaBackupAccessGranted(uri);
+                    }
+                }
+            });
+    private void requestAccess(){
+        // You can directly ask for the permission.
+        // The registered ActivityResultCallback gets the result of this request.
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        requestPermissionLauncher.launch(intent);
     }
 
+    private void mediaBackupAccessGranted(Uri uri){
+        showConfirmationDialog(()->backupData(uri),()-> System.err.println("User cancelled"),
+                "This process may take a long time to complete, and transfers all of your files located in the selected folder to your computer.");
+    }
+
+    private void backupData(Uri uri){
+        DocumentFile dfile = DocumentFile.fromTreeUri(requireContext(), uri);
+        if(dfile==null) return;
+        String backupID = DateFormat.getDateTimeInstance().format(Calendar.getInstance().getTime())
+                .replace(':','_').replace(' ','_');
+        DocumentFile[] fileList = getFilesFromDir(dfile);
+        long totalSize = Arrays.stream(fileList).map(DocumentFile::length).reduce(0L, Long::sum);
+        List<MyFileDescriptor> fileDescriptorList = new ArrayList<>(fileList.length);
+        for(DocumentFile documentFile : fileList){
+            fileDescriptorList.add(MyUriQuery.querySingleFile(documentFile.getUri(),requireActivity().getApplicationContext()));
+        }
+        activityCallback.getServiceController().sendBackupFiles(fileDescriptorList,backupID,totalSize);
+    }
+
+    private DocumentFile[] getFilesFromDir(DocumentFile parent){
+        if(parent==null || !parent.exists()) return new DocumentFile[0];
+        if(parent.isDirectory()){
+            DocumentFile[] documentFiles = parent.listFiles();
+            ArrayList<DocumentFile> ret = new ArrayList<>();
+            for(DocumentFile d: documentFiles){
+                ret.addAll(Arrays.asList(getFilesFromDir(d)));
+            }
+            return ret.toArray(new DocumentFile[0]);
+        }else{
+            return new DocumentFile[]{parent};
+        }
+    }
+
+    //restore
+    private void availableToRestore(ArrayList<AbstractMap.SimpleImmutableEntry<String, Long>> backupList) {
+        if(backupList.isEmpty()){
+            Toast.makeText(getContext(),"There's no available backup to restore",Toast.LENGTH_SHORT).show();
+        }else{
+            showConfirmationDialog(
+                    ()->{
+                        AbstractMap.SimpleImmutableEntry<String, Long> chosenBackup = backupList.get(backupList.size()-1);
+                        activityCallback.getServiceController().requestRestore(chosenBackup.getKey());
+                    },
+                    ()-> System.err.println("User cancelled"),
+                    "This process may take hours to complete, and restore all of your images from your backup to this phone.");
+        }
+        //todo finish this
+        /*
+        1. User click on the restore button -> send request, show dialog wth loading screen
+        2. Received list of backups -> populate dialog (This function should do this)
+        3. User selects the backup to restore -> ask the windows side to do it
+         */
+    }
+
+
+    //etc
     private void showConfirmationDialog(Runnable confirm, Runnable cancel,String message){
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         // Add the buttons
@@ -202,57 +412,15 @@ public class ConnectedFragment extends Fragment {
         dialog.show();
     }
 
-    private void backupData(){
-        //ContentResolver contentResolver = requireActivity().getContentResolver();
-        ContentResolver contentResolver = requireActivity().getApplicationContext().getContentResolver();
-        //ContentResolver contentResolver = getContext().getContentResolver();
-        String backupID = DateFormat.getDateTimeInstance().format(Calendar.getInstance().getTime())
-                .replace(':','_').replace(' ','_');
-
-        new Thread(() ->
-                    MyUriQuery.queryDirectory(contentResolver,
-                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,MediaStore.Images.Media._ID).
-                    stream().
-                    limit(2).
-                    forEach(myFileDescriptor -> activityCallback.getServiceController().sendBackupFile(myFileDescriptor,backupID))
-                ).start();
+    public FileTransferUI getArrivingFileTransfer() {
+        return arrivingFileTransfer;
     }
 
-    private void requestAccess(){
-        if (ContextCompat.checkSelfPermission(
-                requireContext(), Manifest.permission.READ_EXTERNAL_STORAGE) ==
-                PackageManager.PERMISSION_GRANTED) {
-            mediaBackupAccessGranted();
-        }  else {
-            // You can directly ask for the permission.
-            // The registered ActivityResultCallback gets the result of this request.
-            requestPermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE);
-        }
+    public FileTransferUI getSendingFileTransfer() {
+        return sendingFileTransfer;
     }
 
-    private void mediaBackupAccessGranted(){
-        showConfirmationDialog(this::backupData,()-> System.err.println("User cancelled"),
-                "This process may take hours to complete, and tranfers all of your images to you computer. ");
-    }
-
-    public void pingSuccessful(String msg) {
-        binding.receivedMessageLabel.setText(msg);
-    }
-
-    public void availableToRestore(List<String> backupList) {
-        if(backupList.isEmpty()){
-            Toast.makeText(getContext(),"There's no available backup to restore",Toast.LENGTH_SHORT).show();
-        }else{
-            showConfirmationDialog(
-                    ()->activityCallback.getServiceController().requestRestore(backupList.get(backupList.size()-1)),
-                    ()-> System.err.println("User cancelled"),
-                    "This process may take hours to complete, and restore all of your images from your backup to this phone.");
-        }
-        //todo finish this
-        /*
-        1. User click on the restore button -> send request, show dialog wth loading screen
-        2. Received list of backups -> populate dialog (This function should do this)
-        3. User selects the backup to restore -> ask the windows side to do it
-         */
+    public MainViewModel getViewModel() {
+        return viewModel;
     }
 }

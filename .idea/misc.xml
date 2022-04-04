@@ -8,13 +8,16 @@
         <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/layout/activity_settings.xml" value="0.264" />
         <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/layout/content_main.xml" value="0.2359375" />
         <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/layout/content_settings.xml" value="0.36666666666666664" />
-        <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/layout/fragment_connected.xml" value="0.4" />
+        <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/layout/fragment_connected.xml" value="0.264" />
         <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/layout/fragment_connected_improved.xml" value="0.36666666666666664" />
         <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/layout/fragment_connected_old.xml" value="0.36666666666666664" />
         <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/layout/fragment_first.xml" value="0.36666666666666664" />
         <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/layout/fragment_second.xml" value="0.20729166666666668" />
         <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/layout/fragment_to_connect.xml" value="0.264" />
-        <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/layout/service_item_file_sending.xml" value="0.36666666666666664" />
+        <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/layout/list_item.xml" value="0.36666666666666664" />
+        <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/layout/loading_screen.xml" value="0.36666666666666664" />
+        <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/layout/notification_settings.xml" value="0.36666666666666664" />
+        <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/layout/service_item_file_sending.xml" value="0.4" />
         <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/layout/service_item_notifications.xml" value="0.36666666666666664" />
         <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/layout/service_item_streaming.xml" value="0.36666666666666664" />
         <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/layout/settings_activity.xml" value="0.36666666666666664" />

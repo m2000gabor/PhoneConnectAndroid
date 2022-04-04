@@ -25,7 +25,7 @@ public class FileOutputStreamProvider {
 
     public OutputStream getOutputStream(ConnectionManager connectionManager, String name) {
         synchronized (map) {
-            if (map.get(name) != null) return map.get(name);
+            if (map.containsKey(name)) return map.get(name);
             connectionManager.askForSaveLocation(name);
             try {
                 while (map.get(name) == null) {
@@ -38,6 +38,8 @@ public class FileOutputStreamProvider {
         }
         return null;
     }
+
+    public boolean contains(String name){return map.containsKey(name);}
 
     public void onStreamCreated(String name, OutputStream fileSavingOutputStream) {
         synchronized (map){

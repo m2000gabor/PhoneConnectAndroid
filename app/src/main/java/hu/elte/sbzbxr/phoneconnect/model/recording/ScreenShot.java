@@ -4,10 +4,7 @@ import android.graphics.Bitmap;
 
 import java.io.ByteArrayOutputStream;
 
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.FileFrame;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.FrameType;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.NetworkFrame;
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.SegmentFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.SegmentFrame;
 
 public class ScreenShot{
     public static final int JPEG_QUALITY=10;

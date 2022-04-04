@@ -10,6 +10,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
@@ -17,37 +20,23 @@ import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
 import hu.elte.sbzbxr.phoneconnect.databinding.FragmentToConnectBinding;
+import hu.elte.sbzbxr.phoneconnect.model.persistance.MyPreferenceManager;
 
 public class ToConnectFragment extends Fragment {
     private static final String TAG = ToConnectFragment.class.getName();
-    private static final int REQUEST_QR_READING = 3;
     private FragmentToConnectBinding binding;
     private MainActivityCallback activityCallback;
 
     @Override
-    public View onCreateView(
-            LayoutInflater inflater, ViewGroup container,
-            Bundle savedInstanceState
-    ) {
-
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState){
         binding = FragmentToConnectBinding.inflate(inflater, container, false);
         return binding.getRoot();
-
     }
 
     @Override
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-
         showDisconnectedUI();
-        /*
-        binding.buttonFirst.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                NavHostFragment.findNavController(ToConnectFragment.this)
-                        .navigate(R.id.action_FirstFragment_to_SecondFragment);
-            }
-        });*/
     }
 
     @Override
@@ -69,25 +58,24 @@ public class ToConnectFragment extends Fragment {
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if(requestCode== REQUEST_QR_READING && resultCode==Activity.RESULT_OK){
-            //qr
-            IntentResult result = IntentIntegrator.parseActivityResult(requestCode, resultCode, data);
-            if(result != null) {
-                if(result.getContents() == null) {
-                    Log.e("Scan", "Cancelled scan");
-                } else {
-                    Log.v("Scan", "Scanned: "+result.getContents());
-                    String[] scanned = result.getContents().split(":");
-                    fillEditTexts(scanned[0],scanned[1]);
-                    binding.connectButton.callOnClick();
-                }
+        //qr
+        IntentResult result = IntentIntegrator.parseActivityResult(requestCode, resultCode, data);
+        if(result != null) {
+            if(result.getContents() == null) {
+                Log.e("Scan", "Cancelled scan");
+            } else {
+                Log.v("Scan", "Scanned: "+result.getContents());
+                String[] scanned = result.getContents().split(":");
+                fillEditTexts(scanned[0],scanned[1]);
+                binding.connectButton.callOnClick();
             }
         }
     }
 
     private void prefillEditTexts(){
-        fillEditTexts("192.168.0.134","5000");//bdh
-        //illEditTexts("192.168.0.164","5000");//home
+        fillEditTexts(MyPreferenceManager.getAddress(getContext()),MyPreferenceManager.getPort(getContext()));
+        //fillEditTexts("192.168.0.134","5000");//bdh
+        //fillEditTexts("192.168.0.164","5000");//home
     }
 
     private void fillEditTexts(String ip,String port){
@@ -98,13 +86,6 @@ public class ToConnectFragment extends Fragment {
 
     public void showDisconnectedUI(){
         prefillEditTexts();
-
-        /*
-        connectedToLabel.setText("Not connected");
-        connectedToLabel.setVisibility(View.INVISIBLE);
-
-        receivedMessageLabel.setText("No message");
-        receivedMessageLabel.setVisibility(View.INVISIBLE);*/
 
         //update buttons
         binding.connectButton.setText("Connect");
@@ -124,27 +105,21 @@ public class ToConnectFragment extends Fragment {
         });
 
         binding.readQrButton.setText("Scan QR");
-        binding.readQrButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                //serviceController.startNotificationListening();
-                //Log.e(getLocalClassName(),"Unimplemented feature");
-                startQrReaderActivity();
-            }
-        });
+        binding.readQrButton.setOnClickListener(v -> startQrReaderActivity());
     }
 
 
     public void startQrReaderActivity(){
         //From: https://stackoverflow.com/questions/8831050/android-how-to-read-qr-code-in-my-application
-        IntentIntegrator integrator = new IntentIntegrator(ToConnectFragment.this.getActivity());
-        integrator.setCaptureActivity(QrReaderActivity.class);
-        integrator.setDesiredBarcodeFormats(IntentIntegrator.ALL_CODE_TYPES);
-        integrator.setPrompt("Scan");
-        integrator.setCameraId(0);
-        integrator.setBeepEnabled(false);
-        integrator.setBarcodeImageEnabled(false);
-        integrator.setOrientationLocked(true);
-        integrator.initiateScan();
+        //Docs: https://zxing.github.io/zxing/apidocs/com/google/zxing/integration/android/IntentIntegrator.html#IntentIntegrator-android.app.Fragment-
+        IntentIntegrator.forSupportFragment(ToConnectFragment.this)
+                .setCaptureActivity(QrReaderActivity.class)
+                .setDesiredBarcodeFormats(IntentIntegrator.ALL_CODE_TYPES)
+                .setPrompt("Scan")
+                .setCameraId(0)
+                .setBeepEnabled(false)
+                .setBarcodeImageEnabled(false)
+                .setOrientationLocked(true)
+                .initiateScan();
     }
 }

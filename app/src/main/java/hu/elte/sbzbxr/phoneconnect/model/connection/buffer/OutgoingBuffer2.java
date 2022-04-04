@@ -5,7 +5,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.NetworkFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.NetworkFrame;
 
 public class OutgoingBuffer2 {
     private final ConcurrentHashMap<BufferPriority, BlockingQueue<NetworkFrame>> map;

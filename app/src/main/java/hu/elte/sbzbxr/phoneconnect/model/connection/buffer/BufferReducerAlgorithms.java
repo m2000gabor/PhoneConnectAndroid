@@ -1,10 +1,6 @@
 package hu.elte.sbzbxr.phoneconnect.model.connection.buffer;
 
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-
-import hu.elte.sbzbxr.phoneconnect.model.connection.items.NetworkFrame;
-import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenShot;
 
 public class BufferReducerAlgorithms {
     public static <T> void removeEvenIndices(BlockingQueue<T> queue, T toInsert) {
