@@ -36,7 +36,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
             networkSpeedPref.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
                 @Override
                 public boolean onPreferenceChange(@NonNull Preference preference, Object newValue) {
-                    preference.setSummary(newValue.toString());
+                    preference.setSummary(newValue.toString() + " KB/s");
                     return true;
                 }
             });

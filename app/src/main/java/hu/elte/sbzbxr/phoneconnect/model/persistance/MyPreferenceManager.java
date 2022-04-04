@@ -4,14 +4,11 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import androidx.annotation.StringRes;
-import androidx.preference.Preference;
 import androidx.preference.PreferenceManager;
 
 import hu.elte.sbzbxr.phoneconnect.R;
 
 public class MyPreferenceManager {
-    public static final String DEFAULT_IP_ADDRESS = "ip_address";
-    public static final String DEFAULT_PORT = "port";
 
     private static String readSharedPref(Context context, @StringRes int resId, @StringRes int default_resId){
         SharedPreferences p = PreferenceManager.getDefaultSharedPreferences(context);
@@ -31,7 +28,7 @@ public class MyPreferenceManager {
     }
 
     public static void saveAddressAndPort(Context context, String ipAddress, String port){
-        writeSharedPref(context).edit().putString(context.getString(R.string.ip_address),ipAddress).putString(DEFAULT_PORT,port).apply();
+        writeSharedPref(context).edit().putString(context.getString(R.string.ip_address),ipAddress).putString(context.getString(R.string.port),port).apply();
     }
 
     public static Long getNetworkSpeedLimit(Context context){

@@ -35,6 +35,7 @@ import java.util.List;
 import hu.elte.sbzbxr.phoneconnect.controller.MainViewModel;
 import hu.elte.sbzbxr.phoneconnect.databinding.FragmentConnectedBinding;
 import hu.elte.sbzbxr.phoneconnect.model.persistance.MyFileDescriptor;
+import hu.elte.sbzbxr.phoneconnect.model.persistance.MyPreferenceManager;
 import hu.elte.sbzbxr.phoneconnect.model.persistance.MyUriQuery;
 import hu.elte.sbzbxr.phoneconnect.model.actions.NetworkAction;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_FilePieceArrived;
@@ -217,8 +218,8 @@ public class ConnectedFragment extends Fragment {
 
     }
 
-    private int getNetworkLimit(){
-        return 1000000;
+    private long getNetworkLimit(){
+        return MyPreferenceManager.getNetworkSpeedLimit(getContext());
     }
 
     private void stopSending(){
