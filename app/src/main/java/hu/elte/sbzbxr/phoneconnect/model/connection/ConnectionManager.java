@@ -22,6 +22,7 @@ import java.net.Socket;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 
 import hu.elte.sbzbxr.phoneconnect.controller.MainViewModel;
 import hu.elte.sbzbxr.phoneconnect.model.persistance.MyFileDescriptor;
@@ -58,7 +59,7 @@ public class ConnectionManager extends Service {
     private static final String LOG_TAG = "ConnectionManager";
     private boolean isListening = false;
     private boolean isSending = false;
-    private ConnectionLimiter limiter = ConnectionLimiter.noLimit();
+    private AtomicReference<ConnectionLimiter> limiter = new AtomicReference<>(ConnectionLimiter.noLimit());
     private Socket socket;
     private PrintStream out;
     private InputStream in;
@@ -278,12 +279,12 @@ public class ConnectionManager extends Service {
             while(isSending){
                 NetworkFrame sendable = outgoingBuffer.take();
                 if(sendable!=null){
-                    FrameSender.send(limiter,out,sendable);
+                    FrameSender.send(limiter.get(),out,sendable);
                 }else{
                     Log.d(LOG_TAG,"Got null from buffer");
                 }
             }
-            limiter.stop();
+            limiter.get().stop();
         }).start();
     }
 
@@ -337,8 +338,7 @@ public class ConnectionManager extends Service {
     }
 
     public void setLimiter(ConnectionLimiter l) {
-        limiter.stop();
-        limiter = l;
-        limiter.start();
+        limiter.getAndSet(l).stop();
+        limiter.get().start();
     }
 }

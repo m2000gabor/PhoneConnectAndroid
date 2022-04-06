@@ -2,6 +2,7 @@ package hu.elte.sbzbxr.phoneconnect.model.connection;
 
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -9,6 +10,7 @@ public class ConnectionLimiter {
     private final Timer timer;
     private final AtomicLong bytesSentInThisSecond;
     private final AtomicLong maxBytesPerSecond;
+    private final AtomicBoolean monitor = new AtomicBoolean(true);
 
     private ConnectionLimiter(long maxBytesPerSecond) {
         timer = new Timer();
@@ -32,8 +34,8 @@ public class ConnectionLimiter {
             @Override
             public void run() {
                 bytesSentInThisSecond.set(0);
-                synchronized (this){
-                    this.notifyAll();
+                synchronized (monitor){
+                    monitor.notifyAll();
                 }
 
             }},0,1000);
@@ -42,8 +44,8 @@ public class ConnectionLimiter {
     public void stop(){
         timer.cancel();
         maxBytesPerSecond.set(-1);
-        synchronized (this){
-            notifyAll();
+        synchronized (monitor){
+            monitor.notifyAll();
         }
     }
 
@@ -52,8 +54,8 @@ public class ConnectionLimiter {
         try{
             long i = bytesSentInThisSecond.incrementAndGet();
             while (i>=maxBytesPerSecond.get() && maxBytesPerSecond.get()>0){
-                synchronized (this) {
-                    wait();
+                synchronized (monitor) {
+                    monitor.wait();
                 }
                 i = bytesSentInThisSecond.incrementAndGet();
             }
