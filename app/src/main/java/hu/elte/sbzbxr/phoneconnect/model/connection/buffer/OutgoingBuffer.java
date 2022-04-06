@@ -7,7 +7,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.NetworkFrame;
 
-public class OutgoingBuffer2 {
+public class OutgoingBuffer {
     private final ConcurrentHashMap<BufferPriority, BlockingQueue<NetworkFrame>> map;
 
     private enum BufferPriority{
@@ -22,7 +22,7 @@ public class OutgoingBuffer2 {
         BufferPriority(int val){this.v=(byte)val;}
     }
 
-    public OutgoingBuffer2(){
+    public OutgoingBuffer(){
         map = new ConcurrentHashMap<>();
         for(BufferPriority priority : BufferPriority.values()){
             if(getMaxSize(priority) != Integer.MAX_VALUE){
@@ -82,7 +82,7 @@ public class OutgoingBuffer2 {
 
 
     private static void onBufferIsFull(BlockingQueue<NetworkFrame> queue,NetworkFrame toInsert){
-        //BufferReducerAlgorithms.removeEvenIndices(queue,toInsert);
-        BufferReducerAlgorithms.clearQueue(queue, toInsert);
+        BufferReducerAlgorithms.removeEvenIndices(queue,toInsert);
+        //BufferReducerAlgorithms.clearQueue(queue, toInsert);
     }
 }

@@ -34,7 +34,7 @@ import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.Action_NetworkStat
 import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.Action_NetworkStateDisconnected;
 import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_FilePieceSent;
 import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_LastPieceOfFileSent;
-import hu.elte.sbzbxr.phoneconnect.model.connection.buffer.OutgoingBuffer2;
+import hu.elte.sbzbxr.phoneconnect.model.connection.buffer.OutgoingBuffer;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.FileCutter;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.BackupFileFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.FileFrame;
@@ -62,7 +62,7 @@ public class ConnectionManager extends Service {
     private Socket socket;
     private PrintStream out;
     private InputStream in;
-    private final OutgoingBuffer2 outgoingBuffer=new OutgoingBuffer2();
+    private final OutgoingBuffer outgoingBuffer=new OutgoingBuffer();
     private MainViewModel viewModel;
 
     private final IBinder binder = new LocalBinder();

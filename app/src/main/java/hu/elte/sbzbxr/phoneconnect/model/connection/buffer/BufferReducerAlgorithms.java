@@ -4,14 +4,10 @@ import java.util.concurrent.BlockingQueue;
 
 public class BufferReducerAlgorithms {
     public static <T> void removeEvenIndices(BlockingQueue<T> queue, T toInsert) {
-        T tmp = queue.poll();
-        int index = 0;
         int maxSize = queue.size();
-        while (index < maxSize) {
-            if (tmp == null) {
-                index++;
-                continue;
-            }
+        int index = 0;
+        T tmp = queue.poll();
+        while (tmp!=null && index < maxSize) {
             if (index % 2 == 0) queue.offer(tmp);
             index++;
             tmp = queue.poll();
