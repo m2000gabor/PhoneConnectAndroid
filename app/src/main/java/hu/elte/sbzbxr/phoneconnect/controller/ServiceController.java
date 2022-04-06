@@ -38,7 +38,10 @@ public class ServiceController {
         this.viewModel=viewModel;
     }
 
-    public void startScreenCapture(int resultCode, Intent data, MainActivity mainActivity){initScreenCapture(mainActivity);screenCaptureBuilder.start(resultCode,data);}
+    public void startScreenCapture(int resultCode, Intent data, MainActivity mainActivity){
+        connectionManager.sendMessage(new MessageFrame(MessageType.START_OF_STREAM));
+        initScreenCapture(mainActivity);screenCaptureBuilder.start(resultCode,data);
+    }
     public void stopScreenCapture(){
         if(screenCaptureBuilder != null) screenCaptureBuilder.stop();
         connectionManager.sendMessage(new MessageFrame(MessageType.END_OF_STREAM));
