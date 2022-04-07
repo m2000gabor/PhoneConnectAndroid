@@ -5,32 +5,44 @@ import android.content.Intent;
 import android.util.DisplayMetrics;
 
 import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenCapture2;
+import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenCapture3;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 
 
 public class ScreenCaptureBuilder {
     private final MainActivity mainActivity;
-    DisplayMetrics metrics;
     ComponentName componentName;
 
     public ScreenCaptureBuilder(MainActivity mainActivity){
         this.mainActivity=mainActivity;
     }
 
-    private void setupMetrics(){
-        metrics = new DisplayMetrics();
+    private DisplayMetrics setupMetrics(){
+        DisplayMetrics metrics = new DisplayMetrics();
         mainActivity.getWindowManager().getDefaultDisplay().getRealMetrics(metrics);
+        return metrics;
     }
 
-    public void start(int resultCode, Intent data){
-        setupMetrics();
+    public void startRealLive(int resultCode, Intent data){
+        start(resultCode,data,true);
+    }
 
-        Intent intent = new Intent(mainActivity, ScreenCapture2.class);
+    private void start(int resultCode, Intent data, boolean real){
+        DisplayMetrics metrics = setupMetrics();
+
+        Intent intent ;
+        if(real){
+            intent = new Intent(mainActivity, ScreenCapture2.class);
+        }else{
+            intent = new Intent(mainActivity, ScreenCapture3.class);
+        }
+
         intent.putExtra("resultCode",resultCode);
         intent.putExtra("data",data);
-        intent.putExtra("metrics_width", this.metrics.widthPixels);
-        intent.putExtra("metrics_height", this.metrics.heightPixels);
-        intent.putExtra("metrics_densityDpi", this.metrics.densityDpi);
+        intent.putExtra("metrics_width", metrics.widthPixels);
+        intent.putExtra("metrics_height", metrics.heightPixels);
+        intent.putExtra("metrics_densityDpi", metrics.densityDpi);
+        intent.putExtra("isDemo",!real);
 
         //componentName = mainActivity.startService(intent); //if i dont need a new thread, use this
         Thread thread = new Thread(() -> {
@@ -39,5 +51,11 @@ public class ScreenCaptureBuilder {
         thread.start();
     }
 
-    public void stop(){mainActivity.stopService(new Intent().setComponent(componentName));}
+    public void startDemo(){
+        start(-1,null,false);
+    }
+
+    public void stop(){
+        mainActivity.stopService(new Intent().setComponent(componentName));
+    }
 }

@@ -15,8 +15,6 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.ViewModelProvider;
 
-import java.util.AbstractMap;
-import java.util.ArrayList;
 import java.util.Optional;
 
 import hu.elte.sbzbxr.phoneconnect.R;
@@ -26,7 +24,6 @@ import hu.elte.sbzbxr.phoneconnect.databinding.ActivityMainBinding;
 import hu.elte.sbzbxr.phoneconnect.model.actions.Action_FailMessage;
 import hu.elte.sbzbxr.phoneconnect.model.actions.helper.ActionType;
 import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.Action_NetworkStateConnected;
-import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.Action_NetworkStateDisconnected;
 
 public class MainActivity extends AppCompatActivity implements MainActivityCallback {
     public static final String IP_ADDRESS = "ipAddress";
@@ -179,6 +176,11 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
 
     @Override
     public void startScreenCapture(int resultCode, Intent data) {
-        viewModel.getServiceController().startScreenCapture(resultCode,data,this);
+        viewModel.getServiceController().startRealScreenCapture(resultCode,data,this);
+    }
+
+    @Override
+    public void startDemoCapture() {
+        viewModel.getServiceController().startDemoScreenCapture(this);
     }
 }

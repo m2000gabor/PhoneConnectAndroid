@@ -11,4 +11,6 @@ public interface MainActivityCallback {
     void stopNotificationListening();
 
     void startScreenCapture(int resultCode, Intent data);
+
+    void startDemoCapture();
 }

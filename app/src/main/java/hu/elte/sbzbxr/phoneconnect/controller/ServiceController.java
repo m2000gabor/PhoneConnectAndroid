@@ -38,9 +38,14 @@ public class ServiceController {
         this.viewModel=viewModel;
     }
 
-    public void startScreenCapture(int resultCode, Intent data, MainActivity mainActivity){
+    public void startRealScreenCapture(int resultCode, Intent data, MainActivity mainActivity){
         connectionManager.sendMessage(new MessageFrame(MessageType.START_OF_STREAM));
-        initScreenCapture(mainActivity);screenCaptureBuilder.start(resultCode,data);
+        if(screenCaptureBuilder==null){screenCaptureBuilder=new ScreenCaptureBuilder(mainActivity);}
+        screenCaptureBuilder.startRealLive(resultCode,data);
+    }
+    public void startDemoScreenCapture(MainActivity mainActivity){
+        if(screenCaptureBuilder==null){screenCaptureBuilder=new ScreenCaptureBuilder(mainActivity);}
+        screenCaptureBuilder.startDemo();
     }
     public void stopScreenCapture(){
         if(screenCaptureBuilder != null) screenCaptureBuilder.stop();
@@ -69,11 +74,6 @@ public class ServiceController {
     public void sendPing(){connectionManager.sendMessage(new PingMessageFrame("Hello server"));}
     public void askRestoreList(){connectionManager.sendMessage(new MessageFrame(MessageType.RESTORE_GET_AVAILABLE));}
     public void requestRestore(String restoreID){connectionManager.sendMessage(new StartRestoreMessageFrame(restoreID));}
-
-    private void initScreenCapture(MainActivity mainActivity){
-        if(screenCaptureBuilder==null){screenCaptureBuilder=new ScreenCaptureBuilder(mainActivity);}
-    }
-
 
     public void activityBindToConnectionManager(MainActivity mainActivity){
         Intent intent = new Intent(mainActivity, ConnectionManager.class);

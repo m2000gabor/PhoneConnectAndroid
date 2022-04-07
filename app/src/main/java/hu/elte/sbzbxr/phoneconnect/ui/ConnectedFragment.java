@@ -163,7 +163,7 @@ public class ConnectedFragment extends Fragment {
         //Setup processes
         binding.includedScreenSharePanel.screenShareSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if(isChecked){
-                startStreamingClicked();
+                startStreamingClicked(binding.includedScreenSharePanel.demoSourceCheckBox.isChecked());
             }else{
                 stopScreenCaptureAndRecord();
             }
@@ -252,8 +252,13 @@ public class ConnectedFragment extends Fragment {
 
 
     //For screenRecording
-    private void startStreamingClicked(){
-        requestScreenCapturePermission();
+    private void startStreamingClicked(boolean checked){
+        if(checked){
+            startDemoCaptureAndRecord();
+        }else{
+            requestScreenCapturePermission();
+        }
+
     }
 
     private void requestScreenCapturePermission(){
@@ -263,6 +268,9 @@ public class ConnectedFragment extends Fragment {
 
     private void startScreenCaptureAndRecord(int resultCode, Intent data){
         activityCallback.startScreenCapture(resultCode,data);
+    }
+    private void startDemoCaptureAndRecord(){
+        activityCallback.startDemoCapture();
     }
 
     private void stopScreenCaptureAndRecord(){
@@ -284,43 +292,6 @@ public class ConnectedFragment extends Fragment {
     }
 
     private void onRestoreMediaClicked(){ activityCallback.getServiceController().askRestoreList(); }
-
-
-/*
-    private void backupData(){
-        ContentResolver contentResolver = requireActivity().getApplicationContext().getContentResolver();
-        String backupID = DateFormat.getDateTimeInstance().format(Calendar.getInstance().getTime())
-                .replace(':','_').replace(' ','_');
-
-        new Thread(() ->{
-                List<MyFileDescriptor> files = new ArrayList<>(MyUriQuery.queryDirectory(contentResolver,
-                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI, MediaStore.Images.Media._ID)).
-                        stream().
-                        limit(2).
-                        collect(Collectors.toList());
-                long totalSize=files.stream().map(d->d.size).reduce(0L, Long::sum);
-                files.forEach(myFileDescriptor -> activityCallback.getServiceController().sendBackupFile(myFileDescriptor,backupID,totalSize));
-        }).start();
-    }
-
-
-    private final ActivityResultLauncher<String> requestPermissionLauncher =
-            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-                if (isGranted) {
-                    mediaBackupAccessGranted();
-                } else {
-                    System.err.println("User declined");
-                }
-            });
-    private void requestAccess(){
-        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-            mediaBackupAccessGranted();
-        }  else {
-            // You can directly ask for the permission.
-            // The registered ActivityResultCallback gets the result of this request.
-            requestPermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE);
-        }
-    }*/
 
     private final ActivityResultLauncher<Intent> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), new ActivityResultCallback<androidx.activity.result.ActivityResult>() {
@@ -410,14 +381,6 @@ public class ConnectedFragment extends Fragment {
         // Create the AlertDialog
         AlertDialog dialog = builder.create();
         dialog.show();
-    }
-
-    public FileTransferUI getArrivingFileTransfer() {
-        return arrivingFileTransfer;
-    }
-
-    public FileTransferUI getSendingFileTransfer() {
-        return sendingFileTransfer;
     }
 
     public MainViewModel getViewModel() {

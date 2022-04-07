@@ -7,9 +7,11 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.ComponentName;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.PixelFormat;
 import android.hardware.display.DisplayManager;
@@ -32,11 +34,12 @@ import java.nio.Buffer;
 import java.text.DateFormat;
 import java.util.Calendar;
 
+import hu.elte.sbzbxr.phoneconnect.R;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 
 public class ScreenCapture3 extends Service {
-    private static final String LOG_TAG ="ScreenCapture2";
+    private static final String LOG_TAG ="ScreenCapture3";
     private static final String VIRTUAL_DISPLAY_NAME= "VirtualDisplay";
     VirtualDisplay mVirtualDisplay;
     ImageReader imageReader;
@@ -146,11 +149,18 @@ public class ScreenCapture3 extends Service {
     }
 
     private static void createMediaPlayer(Context context,Surface surface){
-        String uri = "";
+        Resources resources = context.getResources();
+        Uri uri = new Uri.Builder()
+                .scheme(ContentResolver.SCHEME_ANDROID_RESOURCE)
+                .authority(resources.getResourcePackageName(R.raw.demovideo))
+                .appendPath(resources.getResourceTypeName(R.raw.demovideo))
+                .appendPath(resources.getResourceEntryName(R.raw.demovideo))
+                .build();
+
         MediaPlayer player=new MediaPlayer();
         player.setSurface(surface);
         try {
-            player.setDataSource(context, Uri.parse(uri));
+            player.setDataSource(context, uri);
             player.prepare();
             player.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
                 @Override
