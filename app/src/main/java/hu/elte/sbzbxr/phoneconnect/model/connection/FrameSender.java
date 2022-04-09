@@ -5,6 +5,7 @@ import android.util.Log;
 import java.io.IOException;
 import java.io.PrintStream;
 
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.FrameType;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.NetworkFrame;
 
 public class FrameSender {
@@ -13,7 +14,9 @@ public class FrameSender {
     private FrameSender() {}
 
     public static void send(ConnectionLimiter limiter, PrintStream out, NetworkFrame networkFrame) {
+        if(networkFrame.type == FrameType.SEGMENT){((ScreenShotFrame)networkFrame).getScreenShot().addTimestamp("beforeSerialize",System.currentTimeMillis());}
         byte[] toWrite = networkFrame.serialize().getAsBytes();
+        if(networkFrame.type == FrameType.SEGMENT){((ScreenShotFrame)networkFrame).getScreenShot().addTimestamp("afterSerialization",System.currentTimeMillis());}
         if(toWrite==null){
             Log.e(LOG_TAG,"Serialization returned null");
             return;
@@ -29,7 +32,9 @@ public class FrameSender {
             }
         }else{
             try {
+                if(networkFrame.type == FrameType.SEGMENT){((ScreenShotFrame)networkFrame).getScreenShot().addTimestamp("beforeSending",System.currentTimeMillis());}
                 out.write(toWrite);
+                if(networkFrame.type == FrameType.SEGMENT){((ScreenShotFrame)networkFrame).getScreenShot().addTimestamp("afterSending",System.currentTimeMillis());}
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -37,5 +42,10 @@ public class FrameSender {
 
         out.flush();
         Log.i(LOG_TAG, networkFrame.type.toString() + " ( " + networkFrame.type.toString() + ", " + toWrite.length + " bytes) successfully sent.");
+        if(networkFrame.type == FrameType.SEGMENT){
+            try {
+                Log.d(LOG_TAG,((ScreenShotFrame)networkFrame).getScreenShot().toString());
+            }catch (NullPointerException ignore){}
+        }
     }
 }

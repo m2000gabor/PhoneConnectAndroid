@@ -122,6 +122,9 @@ public class ScreenCapture2 extends Service {
             public void onImageAvailable(ImageReader reader) {
                 try (Image im = reader.acquireLatestImage()){
                     if(im == null || connectionManager==null){return;}
+
+                    long timeStamp_firstSeen = System.currentTimeMillis();
+
                     Image.Plane[] planes = im.getPlanes();
                     Buffer imageBuffer = planes[0].getBuffer().rewind();
 
@@ -136,8 +139,12 @@ public class ScreenCapture2 extends Service {
                     im.close();
                     imageBuffer.clear();
 
-                    connectionManager.sendScreenShot(new ScreenShot(
-                            getScreenShotName(), bitmap, fileBaseName));
+                    long timeStamp_bitmapCreated = System.currentTimeMillis();
+                    ScreenShot screenShot = new ScreenShot(
+                            getScreenShotName(), bitmap, fileBaseName);
+                    screenShot.addTimestamp("firstSeen",timeStamp_firstSeen);
+                    screenShot.addTimestamp("bitmapCreated",timeStamp_bitmapCreated);
+                    connectionManager.sendScreenShot(screenShot);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

@@ -6,10 +6,13 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.IBinder;
 
+import androidx.lifecycle.Observer;
+
 import java.net.Socket;
 import java.util.Collections;
 import java.util.List;
 
+import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.NetworkStateAction;
 import hu.elte.sbzbxr.phoneconnect.model.persistance.MyFileDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionLimiter;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
@@ -34,9 +37,7 @@ public class ServiceController {
     private final MainViewModel viewModel;
 
 
-    public ServiceController(MainViewModel viewModel) {
-        this.viewModel=viewModel;
-    }
+    public ServiceController(MainViewModel viewModel) { this.viewModel=viewModel;}
 
     public void startRealScreenCapture(int resultCode, Intent data, MainActivity mainActivity){
         connectionManager.sendMessage(new MessageFrame(MessageType.START_OF_STREAM));
@@ -49,7 +50,7 @@ public class ServiceController {
     }
     public void stopScreenCapture(){
         if(screenCaptureBuilder != null) screenCaptureBuilder.stop();
-        connectionManager.sendMessage(new MessageFrame(MessageType.END_OF_STREAM));
+        if(connectionManager != null) connectionManager.sendMessage(new MessageFrame(MessageType.END_OF_STREAM));
     }
 
     public boolean connectToServer(String ip, int port){

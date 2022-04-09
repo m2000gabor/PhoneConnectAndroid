@@ -127,6 +127,8 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
 
     private void afterDisconnect(){
         try {
+            getServiceController().stopNotificationListening(this);
+            getServiceController().stopScreenCapture();
             FragmentManager fragmentManager = getSupportFragmentManager();
             fragmentManager.beginTransaction()
                     .replace(FRAGMENT_CONTAINER_ID, ToConnectFragment.class, null, TO_CONNECT_FRAGMENT_TAG)

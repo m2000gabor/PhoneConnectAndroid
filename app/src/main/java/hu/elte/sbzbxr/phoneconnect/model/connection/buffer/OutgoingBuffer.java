@@ -5,6 +5,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import hu.elte.sbzbxr.phoneconnect.model.connection.ScreenShotFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.FrameType;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.NetworkFrame;
 
 public class OutgoingBuffer {
@@ -45,6 +47,7 @@ public class OutgoingBuffer {
                 if(ret !=null) break;
             }
         }
+        if(ret.type == FrameType.SEGMENT){((ScreenShotFrame)ret).getScreenShot().addTimestamp("takenFromBuffer",System.currentTimeMillis());}
         return ret;
     }
 
@@ -58,7 +61,7 @@ public class OutgoingBuffer {
             case SEGMENT:priority=BufferPriority.SEGMENT; break;
             case FILE: priority=BufferPriority.FILE;break;
         }
-
+        if(frame.type== FrameType.SEGMENT){((ScreenShotFrame)frame).getScreenShot().addTimestamp("beforeInsert",System.currentTimeMillis());}
         try {
             if(priority==BufferPriority.SEGMENT){
                 if(!map.get(priority).offer(frame)){
@@ -67,6 +70,7 @@ public class OutgoingBuffer {
             }else{
                 map.get(priority).put(frame);
             }
+            if(frame.type== FrameType.SEGMENT){((ScreenShotFrame)frame).getScreenShot().addTimestamp("inserted",System.currentTimeMillis());}
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

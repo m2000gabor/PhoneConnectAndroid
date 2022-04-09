@@ -44,4 +44,9 @@ public class ScreenShotFrame extends NetworkFrame {
         if(!isTransformed()) transform();
         return segmentFrame.serialize();
     }
+
+    public ScreenShot getScreenShot() {
+        return screenShot;
+    }
+
 }
