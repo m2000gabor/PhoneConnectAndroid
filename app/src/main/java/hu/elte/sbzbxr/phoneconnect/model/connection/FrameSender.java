@@ -1,5 +1,7 @@
 package hu.elte.sbzbxr.phoneconnect.model.connection;
 
+import static hu.elte.sbzbxr.phoneconnect.ui.MainActivity.LOG_SEGMENTS;
+
 import android.util.Log;
 
 import java.io.IOException;
@@ -42,7 +44,7 @@ public class FrameSender {
 
         out.flush();
         Log.i(LOG_TAG, networkFrame.type.toString() + " ( " + networkFrame.type.toString() + ", " + toWrite.length + " bytes) successfully sent.");
-        if(networkFrame.type == FrameType.SEGMENT){
+        if(networkFrame.type == FrameType.SEGMENT && LOG_SEGMENTS){
             try {
                 Log.d(LOG_TAG,((ScreenShotFrame)networkFrame).getScreenShot().toString());
             }catch (NullPointerException ignore){}

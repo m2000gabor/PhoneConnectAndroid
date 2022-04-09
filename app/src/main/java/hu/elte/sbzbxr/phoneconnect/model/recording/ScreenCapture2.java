@@ -28,6 +28,7 @@ import androidx.core.app.NotificationCompat;
 import java.nio.Buffer;
 import java.text.DateFormat;
 import java.util.Calendar;
+import java.util.concurrent.TimeUnit;
 
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
@@ -116,7 +117,7 @@ public class ScreenCapture2 extends Service {
         //projection.registerCallback(mediaProjectionCallback, surfaceTextureHelper.getHandler());
 
         //From: https://stackoverflow.com/questions/37143968/how-to-handle-image-capture-with-mediaprojection-on-orientation-change
-        imageReader = ImageReader.newInstance(metrics_width,metrics_height, PixelFormat.RGBA_8888,50);
+        imageReader = ImageReader.newInstance(metrics_width,metrics_height, PixelFormat.RGBA_8888,5);
         imageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
             @Override
             public void onImageAvailable(ImageReader reader) {
