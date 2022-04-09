@@ -79,14 +79,14 @@ public class OutgoingBuffer {
     private static int getMaxSize(BufferPriority type){
         switch (type){
             default: return Integer.MAX_VALUE;
-            case SEGMENT: return 10;
+            case SEGMENT: return 5;
             case FILE: return 20;
         }
     }
 
 
     private static void onBufferIsFull(BlockingQueue<NetworkFrame> queue,NetworkFrame toInsert){
-        BufferReducerAlgorithms.removeEvenIndices(queue,toInsert);
-        //BufferReducerAlgorithms.clearQueue(queue, toInsert);
+        //BufferReducerAlgorithms.removeEvenIndices(queue,toInsert);
+        BufferReducerAlgorithms.clearQueue(queue, toInsert);
     }
 }

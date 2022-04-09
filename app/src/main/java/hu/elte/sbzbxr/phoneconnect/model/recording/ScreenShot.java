@@ -40,12 +40,6 @@ public class ScreenShot{
         return streamId;
     }
 
-    public SegmentFrame toFrame() {
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(3000000);
-        getBitmap().compress(Bitmap.CompressFormat.JPEG,JPEG_QUALITY,byteArrayOutputStream);
-        return new SegmentFrame(getName(),byteArrayOutputStream.toByteArray(),streamId);
-    }
-
     public void addTimestamp(String label, Long timeInMillis){
         @SuppressLint("SimpleDateFormat") String readableTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(timeInMillis);
         timestamps.add(new AbstractMap.SimpleEntry<>(label,readableTime));

@@ -136,8 +136,6 @@ public class ScreenCapture2 extends Service {
                     Bitmap bitmap = Bitmap.createBitmap(metrics_width + rowPadding / pixelStride, metrics_height,
                             Bitmap.Config.ARGB_8888);
                     bitmap.copyPixelsFromBuffer(imageBuffer);
-                    im.close();
-                    imageBuffer.clear();
 
                     long timeStamp_bitmapCreated = System.currentTimeMillis();
                     ScreenShot screenShot = new ScreenShot(
