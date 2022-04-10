@@ -12,6 +12,10 @@ import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.NetworkFrame;
 public class OutgoingBuffer {
     private final ConcurrentHashMap<BufferPriority, BlockingQueue<NetworkFrame>> map;
 
+    public void clear() {
+        map.forEach((prio,queue)->queue.clear());
+    }
+
     private enum BufferPriority{
         INSTANT(1),
         IMPORTANT(2),

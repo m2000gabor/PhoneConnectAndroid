@@ -137,6 +137,7 @@ public class ConnectionManager extends Service {
             if(out!=null) out.close();
             if(socket!=null) socket.close();
             viewModel.postAction(new Action_NetworkStateDisconnected());
+            outgoingBuffer.clear();
         } catch (IOException e) {
             e.printStackTrace();
         }
