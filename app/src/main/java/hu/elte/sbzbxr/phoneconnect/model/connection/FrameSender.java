@@ -32,17 +32,18 @@ public class FrameSender {
                 out.write(b);
                 if(out.checkError()) break;
             }
+            out.flush();
         }else{
             try {
                 if(networkFrame.type == FrameType.SEGMENT){((ScreenShotFrame)networkFrame).getScreenShot().addTimestamp("beforeSending",System.currentTimeMillis());}
                 out.write(toWrite);
+                out.flush();
                 if(networkFrame.type == FrameType.SEGMENT){((ScreenShotFrame)networkFrame).getScreenShot().addTimestamp("afterSending",System.currentTimeMillis());}
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
-        out.flush();
         Log.i(LOG_TAG, networkFrame.type.toString() + " ( " + networkFrame.type.toString() + ", " + toWrite.length + " bytes) successfully sent.");
         if(networkFrame.type == FrameType.SEGMENT && LOG_SEGMENTS){
             try {
