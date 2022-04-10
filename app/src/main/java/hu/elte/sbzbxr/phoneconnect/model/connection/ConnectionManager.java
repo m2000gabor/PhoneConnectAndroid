@@ -13,11 +13,11 @@ import android.util.Log;
 
 import androidx.annotation.Nullable;
 
+import java.io.BufferedOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.PrintStream;
 import java.net.Socket;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -60,7 +60,7 @@ public class ConnectionManager extends Service {
     private boolean isSending = false;
     private ConnectionLimiter limiter = ConnectionLimiter.noLimit();
     private Socket socket;
-    private PrintStream out;
+    private BufferedOutputStream out;
     private InputStream in;
     private final OutgoingBuffer outgoingBuffer=new OutgoingBuffer();
     private MainViewModel viewModel;
@@ -151,7 +151,7 @@ public class ConnectionManager extends Service {
     /**
      * Invoked when a connection asynchronously established
      */
-    void connectRequestFinished(boolean successful,Socket s, String ip, int port, InputStream i, PrintStream o){
+    void connectRequestFinished(boolean successful, Socket s, String ip, int port, InputStream i, BufferedOutputStream o){
         socket=s;
         in=i;
         out=o;

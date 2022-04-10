@@ -4,8 +4,8 @@ import static hu.elte.sbzbxr.phoneconnect.ui.MainActivity.LOG_SEGMENTS;
 
 import android.util.Log;
 
+import java.io.BufferedOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
 
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.FrameType;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.NetworkFrame;
@@ -15,7 +15,7 @@ public class FrameSender {
 
     private FrameSender() {}
 
-    public static void send(ConnectionLimiter limiter, PrintStream out, NetworkFrame networkFrame) {
+    public static void send(ConnectionLimiter limiter, BufferedOutputStream out, NetworkFrame networkFrame) {
         if(networkFrame.type == FrameType.SEGMENT){((ScreenShotFrame)networkFrame).getScreenShot().addTimestamp("beforeSerialize",System.currentTimeMillis());}
         byte[] toWrite = networkFrame.serialize().getAsBytes();
         if(networkFrame.type == FrameType.SEGMENT){((ScreenShotFrame)networkFrame).getScreenShot().addTimestamp("afterSerialization",System.currentTimeMillis());}
@@ -24,15 +24,17 @@ public class FrameSender {
             return;
         }
         if(limiter.hasLimit()){
-            //int i = limiter.canSend();
-            //out.write(toWrite,0,i);
-
-            for (byte b : toWrite) {
-                limiter.send(b);
-                out.write(b);
-                if(out.checkError()) break;
+            try {
+                if(networkFrame.type == FrameType.SEGMENT){((ScreenShotFrame)networkFrame).getScreenShot().addTimestamp("beforeSending",System.currentTimeMillis());}
+                for (byte b : toWrite) {
+                    limiter.send(b);
+                    out.write(b);
+                }
+                out.flush();
+                if(networkFrame.type == FrameType.SEGMENT){((ScreenShotFrame)networkFrame).getScreenShot().addTimestamp("afterSending",System.currentTimeMillis());}
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-            out.flush();
         }else{
             try {
                 if(networkFrame.type == FrameType.SEGMENT){((ScreenShotFrame)networkFrame).getScreenShot().addTimestamp("beforeSending",System.currentTimeMillis());}
