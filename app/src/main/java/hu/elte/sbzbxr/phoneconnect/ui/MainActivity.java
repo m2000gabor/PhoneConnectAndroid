@@ -26,7 +26,7 @@ import hu.elte.sbzbxr.phoneconnect.model.actions.helper.ActionType;
 import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.Action_NetworkStateConnected;
 
 public class MainActivity extends AppCompatActivity implements MainActivityCallback {
-    public static final boolean LOG_SEGMENTS=true;
+    public static final boolean LOG_SEGMENTS=false;
     public static final String IP_ADDRESS = "ipAddress";
     public static final String PORT = "port";
     private static final String TAG = MainActivity.class.getName();
