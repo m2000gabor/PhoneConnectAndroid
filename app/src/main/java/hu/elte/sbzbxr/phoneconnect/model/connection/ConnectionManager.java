@@ -1,6 +1,7 @@
 package hu.elte.sbzbxr.phoneconnect.model.connection;
 
 import static hu.elte.sbzbxr.phoneconnect.ui.PickLocationActivity.FILENAME_TO_CREATE;
+import static hu.elte.sbzbxr.phoneconnect.ui.PickLocationActivity.FOLDERNAME_TO_CREATE;
 
 import android.app.Service;
 import android.content.Intent;
@@ -14,7 +15,6 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 
 import java.io.BufferedOutputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -24,6 +24,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import hu.elte.sbzbxr.phoneconnect.controller.MainViewModel;
+import hu.elte.sbzbxr.phoneconnect.model.persistance.FileInFolderDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.persistance.MyFileDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.actions.Action_FailMessage;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_FilePieceArrived;
@@ -64,6 +65,7 @@ public class ConnectionManager extends Service {
     private InputStream in;
     private final OutgoingBuffer outgoingBuffer=new OutgoingBuffer();
     private MainViewModel viewModel;
+    private final FileOutputStreamProvider streamProvider = new FileOutputStreamProvider(this);
 
     private final IBinder binder = new LocalBinder();
 
@@ -94,9 +96,10 @@ public class ConnectionManager extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         try{
             Uri uri = intent.getParcelableExtra(PickLocationActivity.URI_OF_FILE);
-            String filename = intent.getStringExtra(FILENAME_TO_CREATE);
             if(uri !=null){
-                openOutputStream(filename,uri);
+                String filename = intent.getStringExtra(FILENAME_TO_CREATE);
+                String folderName = intent.getStringExtra(FOLDERNAME_TO_CREATE);
+                streamProvider.createStream(new FileInFolderDescriptor(filename,folderName),uri);
             }
         }catch (ClassCastException e){
             Log.d(LOG_TAG,"not a Uri");
@@ -200,22 +203,18 @@ public class ConnectionManager extends Service {
         }).start();
     }
 
-    private final FileOutputStreamProvider streamProvider = new FileOutputStreamProvider();
     private void fileArrived(FileFrame fileFrame) {
-        String name = fileFrame.filename;
-        if(name==null) {
+        if(fileFrame.filename==null) {
             Log.e(LOG_TAG,"This frame doesn't have a name");
             return;
         }
-
-        OutputStream os = streamProvider.getOutputStream(this, name);
+        final FileInFolderDescriptor desc = new FileInFolderDescriptor(fileFrame.filename,fileFrame.folderName);
         if(fileFrame.getDataLength()==0){
-            final String tmp = fileFrame.filename;
-            Log.d(LOG_TAG,"File arrived: "+tmp);
+            Log.d(LOG_TAG,"File arrived: "+desc.toString());
             viewModel.postAction(new Action_LastPieceOfFileArrived(fileFrame));
-            //view.getConnectedFragment().ifPresent(f->f.getArrivingFileTransfer().incomingFileTransferStopped(fileFrame, true));
-            streamProvider.endOfFileStreaming(name);
+            streamProvider.endOfFileStreaming(desc);
         }else{
+            OutputStream os = streamProvider.getOutputStream(desc);
             saveFrame(os,fileFrame);
             viewModel.postAction(new Action_FilePieceArrived(fileFrame));
         }
@@ -228,26 +227,6 @@ public class ConnectionManager extends Service {
             e.printStackTrace();
         }
     }
-
-    public void askForSaveLocation(String filename){
-        Intent intent = new Intent();
-        intent.setClass(getApplicationContext(), PickLocationActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        intent.putExtra(FILENAME_TO_CREATE,filename);
-        startActivity(intent);
-    }
-
-    private void openOutputStream(String filename, Uri uri){
-        try {
-            OutputStream fileSavingOutputStream = getContentResolver().openOutputStream(uri,"w");
-            streamProvider.onStreamCreated(filename,fileSavingOutputStream);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-            Log.e("PickLocationActivity","No access to this location; cannot save the file");
-        }
-    }
-
-
 
     void messageArrived(InputStream in) throws IOException{
         MessageFrame messageFrame = MessageFrame.deserialize(in);
