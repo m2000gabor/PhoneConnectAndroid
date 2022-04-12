@@ -31,6 +31,7 @@ import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import hu.elte.sbzbxr.phoneconnect.controller.MainViewModel;
 import hu.elte.sbzbxr.phoneconnect.databinding.FragmentConnectedBinding;
@@ -48,7 +49,7 @@ import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionLimiter;
 import hu.elte.sbzbxr.phoneconnect.ui.notifications.NotificationSettings;
 import hu.elte.sbzbxr.phoneconnect.ui.progress.FileTransferUI;
 
-public class ConnectedFragment extends Fragment {
+public class ConnectedFragment extends Fragment implements ListDialog.NoticeListDialogListener {
     private static final String TAG = ToConnectFragment.class.getName();
     private static final int REQUEST_MEDIA_PROJECTION = 1;
     private static final int REQUEST_FILE_PICKER = 2;
@@ -349,23 +350,21 @@ public class ConnectedFragment extends Fragment {
     private void availableToRestore(ArrayList<AbstractMap.SimpleImmutableEntry<String, Long>> backupList) {
         if(backupList.isEmpty()){
             Toast.makeText(getContext(),"There's no available backup to restore",Toast.LENGTH_SHORT).show();
-        }else{
-            showConfirmationDialog(
-                    ()->{
-                        AbstractMap.SimpleImmutableEntry<String, Long> chosenBackup = backupList.get(backupList.size()-1);
-                        activityCallback.getServiceController().requestRestore(chosenBackup.getKey());
-                    },
-                    ()-> System.err.println("User cancelled"),
-                    "This process may take hours to complete, and restore all of your images from your backup to this phone.");
+        }else {
+            ListDialog newFragment = new ListDialog(backupList);
+            newFragment.show(requireActivity().getSupportFragmentManager(), "backupListChooser");
         }
-        //todo finish this
-        /*
-        1. User click on the restore button -> send request, show dialog wth loading screen
-        2. Received list of backups -> populate dialog (This function should do this)
-        3. User selects the backup to restore -> ask the windows side to do it
-         */
     }
 
+    @Override
+    public void onListItemSelected(AbstractMap.SimpleImmutableEntry<String, Long> selectedEntry, String selectedLabel) {
+        activityCallback.getServiceController().requestRestore(selectedEntry.getKey());
+    }
+
+    @Override
+    public void onRestoreCancelled() {
+        System.err.println("User cancelled");
+    }
 
     //etc
     private void showConfirmationDialog(Runnable confirm, Runnable cancel,String message){
