@@ -13,4 +13,6 @@ public interface MainActivityCallback {
     void startScreenCapture(int resultCode, Intent data);
 
     void startDemoCapture();
+
+    boolean connectToServer(String ip, int port);
 }
