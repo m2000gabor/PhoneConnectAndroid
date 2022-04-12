@@ -15,6 +15,7 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.ViewModelProvider;
 
+import java.util.AbstractMap;
 import java.util.Optional;
 
 import hu.elte.sbzbxr.phoneconnect.R;
@@ -25,7 +26,7 @@ import hu.elte.sbzbxr.phoneconnect.model.actions.Action_FailMessage;
 import hu.elte.sbzbxr.phoneconnect.model.actions.helper.ActionType;
 import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.Action_NetworkStateConnected;
 
-public class MainActivity extends AppCompatActivity implements MainActivityCallback {
+public class MainActivity extends AppCompatActivity implements MainActivityCallback, ListDialog.NoticeListDialogListener {
     public static final boolean LOG_SEGMENTS=false;
     public static final String IP_ADDRESS = "ipAddress";
     public static final String PORT = "port";
@@ -36,6 +37,7 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
     private final static int FRAGMENT_CONTAINER_ID = R.id.main_fragment_container;
     public static final String CONNECTED_FRAGMENT_TAG="ConnectedFragment";
     public static final String TO_CONNECT_FRAGMENT_TAG="ToConnectFragment";
+    public static final String LOADING_FRAGMENT_TAG="LoadingFragment";
 
     private MainViewModel viewModel;
 
@@ -69,6 +71,10 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
                 case FAIL_MESSAGE:
                     showFailMessage(((Action_FailMessage) action).getField());
                     break;
+                case FAILED_CONNECT:
+                    afterDisconnect();
+                    Toast.makeText(this,"Cannot connect",Toast.LENGTH_SHORT).show();
+                    break;
             }
         });
 
@@ -78,7 +84,6 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
                 System.err.println("connected to:"+a.getIp()+":"+a.getPort());
                 connectedTo(a.getIp(),a.getPort());
             }else if(networkStateAction.getType()== ActionType.JUST_DISCONNECTED){
-                //Action_NetworkStateDisconnected a = (Action_NetworkStateDisconnected) networkStateAction;
                 afterDisconnect();
             }else{
                 throw new IllegalArgumentException("unknown networkStateAction type");
@@ -185,5 +190,27 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
     @Override
     public void startDemoCapture() {
         viewModel.getServiceController().startDemoScreenCapture(this);
+    }
+
+    @Override
+    public boolean connectToServer(String ip, int port) {
+        boolean r = getServiceController().connectToServer(ip, port);
+        LoadingDialog loadingDialog = new LoadingDialog("Connecting...");
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        fragmentManager.beginTransaction()
+                .replace(FRAGMENT_CONTAINER_ID, loadingDialog, LOADING_FRAGMENT_TAG)
+                .setReorderingAllowed(true)
+                .commit();
+        return r;
+    }
+
+    @Override
+    public void onListItemSelected(AbstractMap.SimpleImmutableEntry<String, Long> selectedEntry, String selectedLabel) {
+        getServiceController().requestRestore(selectedEntry.getKey());
+    }
+
+    @Override
+    public void onRestoreCancelled() {
+        System.err.println("User cancelled");
     }
 }

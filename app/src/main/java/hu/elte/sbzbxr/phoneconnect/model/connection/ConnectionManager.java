@@ -24,6 +24,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import hu.elte.sbzbxr.phoneconnect.controller.MainViewModel;
+import hu.elte.sbzbxr.phoneconnect.model.actions.Action_FailedToConnect;
 import hu.elte.sbzbxr.phoneconnect.model.persistance.FileInFolderDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.persistance.MyFileDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.actions.Action_FailMessage;
@@ -155,10 +156,12 @@ public class ConnectionManager extends Service {
      * Invoked when a connection asynchronously established
      */
     void connectRequestFinished(boolean successful, Socket s, String ip, int port, InputStream i, BufferedOutputStream o){
-        socket=s;
-        in=i;
-        out=o;
-        if(successful){
+        if(!successful){
+            viewModel.postAction(new Action_FailedToConnect(ip+":"+port));
+        }else{
+            socket=s;
+            in=i;
+            out=o;
             viewModel.postAction(new Action_NetworkStateConnected(ip,port));
             if (out == null) {
                 System.err.println("But its null!!");
@@ -168,8 +171,6 @@ public class ConnectionManager extends Service {
             isSending=true;
             listen();
             startSendingThread();
-        }else{
-            viewModel.postAction(new Action_FailMessage("Could not establish the connection!"));
         }
     }
 

@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import hu.elte.sbzbxr.phoneconnect.ui.ConnectedFragment;
+import hu.elte.sbzbxr.phoneconnect.ui.LoadingDialog;
 
 public class NotificationSettings implements SaveList {
     public final static String PREF_FILE_NOTIFICATION = "hu.elte.sbzbxr.phoneconnect.ui.notifications."+"notificationsNotToSend";
@@ -42,7 +43,7 @@ public class NotificationSettings implements SaveList {
 
     //From: https://developer.android.com/guide/topics/ui/dialogs#AddingAList
     public void showDialog() {
-        LoadingDialog loadingDialog = new LoadingDialog();
+        LoadingDialog loadingDialog = new LoadingDialog("Loading...");
         loadingDialog.show(connectedFragment.getParentFragmentManager(),"loading");
         final PackageManager pm = connectedFragment.requireActivity().getPackageManager();
         List<ApplicationInfo> packages = pm.getInstalledApplications(PackageManager.GET_META_DATA);
