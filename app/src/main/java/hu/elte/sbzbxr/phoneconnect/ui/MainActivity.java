@@ -25,7 +25,7 @@ import hu.elte.sbzbxr.phoneconnect.model.actions.Action_FailMessage;
 import hu.elte.sbzbxr.phoneconnect.model.actions.helper.ActionType;
 import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.Action_NetworkStateConnected;
 
-public class MainActivity extends AppCompatActivity implements MainActivityCallback {
+public class MainActivity extends AppCompatActivity implements MainActivityCallback, ListDialog.NoticeListDialogListener {
     public static final boolean LOG_SEGMENTS=false;
     public static final String IP_ADDRESS = "ipAddress";
     public static final String PORT = "port";
@@ -72,6 +72,7 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
                     break;
                 case FAILED_CONNECT:
                     afterDisconnect();
+                    Toast.makeText(this,"Cannot connect",Toast.LENGTH_SHORT).show();
                     break;
             }
         });
@@ -200,5 +201,15 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
                 .setReorderingAllowed(true)
                 .commit();
         return r;
+    }
+
+    @Override
+    public void onListItemSelected(AbstractMap.SimpleImmutableEntry<String, Long> selectedEntry, String selectedLabel) {
+        getServiceController().requestRestore(selectedEntry.getKey());
+    }
+
+    @Override
+    public void onRestoreCancelled() {
+        System.err.println("User cancelled");
     }
 }

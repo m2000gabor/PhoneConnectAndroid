@@ -49,11 +49,10 @@ import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionLimiter;
 import hu.elte.sbzbxr.phoneconnect.ui.notifications.NotificationSettings;
 import hu.elte.sbzbxr.phoneconnect.ui.progress.FileTransferUI;
 
-public class ConnectedFragment extends Fragment implements ListDialog.NoticeListDialogListener {
+public class ConnectedFragment extends Fragment {
     private static final String TAG = ToConnectFragment.class.getName();
     private static final int REQUEST_MEDIA_PROJECTION = 1;
     private static final int REQUEST_FILE_PICKER = 2;
-    private static final int REQUEST_BACKUP_DIR = 3;
     private FragmentConnectedBinding binding;
     private MainActivityCallback activityCallback;
     private FileTransferUI arrivingFileTransfer;
@@ -352,18 +351,8 @@ public class ConnectedFragment extends Fragment implements ListDialog.NoticeList
             Toast.makeText(getContext(),"There's no available backup to restore",Toast.LENGTH_SHORT).show();
         }else {
             ListDialog newFragment = new ListDialog(backupList);
-            newFragment.show(requireActivity().getSupportFragmentManager(), "backupListChooser");
+            newFragment.show(getChildFragmentManager(), "backupListChooser");
         }
-    }
-
-    @Override
-    public void onListItemSelected(AbstractMap.SimpleImmutableEntry<String, Long> selectedEntry, String selectedLabel) {
-        activityCallback.getServiceController().requestRestore(selectedEntry.getKey());
-    }
-
-    @Override
-    public void onRestoreCancelled() {
-        System.err.println("User cancelled");
     }
 
     //etc
