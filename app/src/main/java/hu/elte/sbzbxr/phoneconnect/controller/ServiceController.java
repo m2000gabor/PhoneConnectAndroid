@@ -162,15 +162,26 @@ public class ServiceController {
         return screenCaptureManager;
     }
 
+    public NotificationManager getNotificationManager() {
+        return notificationManager;
+    }
+
     public Notification getNotification() {
         return notification;
     }
 
     public ConnectedFragmentUIData getConnectedUIData(){
+        Socket s = isConnected();
+        String ip = null;
+        String port = null;
+        if(s!=null){
+            ip=s.getInetAddress().getHostAddress();
+            port = String.valueOf(s.getPort());
+        }
         return new ConnectedFragmentUIData(
-                isConnected().getInetAddress().getHostAddress(),
-                String.valueOf(isConnected().getPort()),
-                isConnected()!=null,
+                ip,
+                port,
+                screenCaptureManager.isRunning(),
                 notificationManager.isListening(),
                 false,
                 false

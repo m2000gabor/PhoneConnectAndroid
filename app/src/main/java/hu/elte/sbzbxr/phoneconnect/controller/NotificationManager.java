@@ -33,8 +33,10 @@ public class NotificationManager {
             requestNotificationListeningPermission(service);
         }
         if(!testForPermission(service)){Log.d(LOG_TAG, "User declined access to Notifications");return;}
+
         Intent intent = new Intent(service, MyNotificationListenerService.class);
-        service.bindService(intent,connection, Context.BIND_AUTO_CREATE);
+        service.startService(intent);
+        //service.bindService(intent,connection, Context.BIND_IMPORTANT);
     }
 
     /**
@@ -43,6 +45,9 @@ public class NotificationManager {
      * @return true if the NotificationService ran and successfully stopped, false otherwise
      */
     public boolean stop(Service service){
+        if (notificationListenerService != null) {
+            notificationListenerService.stop();
+        }
         return service.stopService(new Intent(service,MyNotificationListenerService.class));
     }
 
@@ -54,28 +59,13 @@ public class NotificationManager {
     }
 
     @Nullable private MyNotificationListenerService notificationListenerService;
-    private boolean mBound = false;
-    private final ServiceConnection connection = new ServiceConnection() {
-
-        @Override
-        public void onServiceConnected(ComponentName className,
-                                       IBinder service) {
-            // We've bound to LocalService, cast the IBinder and get LocalService instance
-            MyNotificationListenerService.LocalBinder binder = (MyNotificationListenerService.LocalBinder) service;
-            notificationListenerService = binder.getService();
-            notificationListenerService.addConnectionManager(serviceController.getConnectionManager());
-            mBound = true;
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName arg0) {
-            mBound = false;
-            notificationListenerService=null;
-        }
-    };
 
     public boolean isListening(){
         if(notificationListenerService==null) return false;
         return notificationListenerService.isListening();
+    }
+
+    public void setNotificationListenerService(@Nullable MyNotificationListenerService notificationListenerService) {
+        this.notificationListenerService = notificationListenerService;
     }
 }

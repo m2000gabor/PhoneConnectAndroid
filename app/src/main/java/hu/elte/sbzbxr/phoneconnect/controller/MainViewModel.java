@@ -18,9 +18,15 @@ import java.net.Socket;
 import java.util.logging.Logger;
 
 import hu.elte.sbzbxr.phoneconnect.model.actions.NetworkAction;
+import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_FilePieceArrived;
+import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_LastPieceOfFileArrived;
+import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_PingArrived;
+import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_RestoreListAvailable;
 import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.Action_NetworkStateConnected;
 import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.Action_NetworkStateDisconnected;
 import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.NetworkStateAction;
+import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_FilePieceSent;
+import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_LastPieceOfFileSent;
 import hu.elte.sbzbxr.phoneconnect.model.notification.NotificationFilter;
 import hu.elte.sbzbxr.phoneconnect.ui.ConnectedFragmentUIData;
 
@@ -65,6 +71,8 @@ public class MainViewModel extends AndroidViewModel {
 
     public void refreshData(@Nullable ServiceController controller){
         if(controller==null) return;
+        if (connectionData == null) uiData = new MutableLiveData<>();
+        if (uiData == null) uiData = new MutableLiveData<>();
         loadConnectionData(connectionData, controller);
         loadUiData(uiData,controller);
     }
@@ -82,11 +90,11 @@ public class MainViewModel extends AndroidViewModel {
         }
     }
 
-    public void postAction(NetworkAction action){
-        if(action instanceof NetworkStateAction){
-            postNetworkAction((NetworkStateAction) action);
+    public void postAction(NetworkAction networkAction){
+        if(networkAction instanceof NetworkStateAction){
+            postNetworkAction((NetworkStateAction) networkAction);
         }else{
-            incomeAction.postValue(action);
+            incomeAction.postValue(networkAction);
         }
     }
 

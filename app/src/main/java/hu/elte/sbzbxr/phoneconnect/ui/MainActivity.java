@@ -162,14 +162,14 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
 
     @Override
     protected void onStop() {
-        super.onStop();
         unbindService(connection);
         mBound = false;
+        super.onStop();
     }
 
     @Nullable private ServiceController serviceController;
     private boolean mBound = false;
-    private ServiceConnection connection = new ServiceConnection() {
+    private final ServiceConnection connection = new ServiceConnection() {
 
         @Override
         public void onServiceConnected(ComponentName className,
@@ -200,22 +200,30 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
 
     @Override
     public void startNotificationListening() {
-       getServiceController().startNotificationListening(this);
+        if (getServiceController() != null) {
+            getServiceController().startNotificationListening(this);
+        }
     }
 
     @Override
     public void stopNotificationListening() {
-        getServiceController().stopNotificationListening(this);
+        if (getServiceController() != null) {
+            getServiceController().stopNotificationListening(this);
+        }
     }
 
     @Override
     public void startScreenCapture(int resultCode, Intent data) {
-        getServiceController().startRealScreenCapture(resultCode,data,this);
+        if (getServiceController() != null) {
+            getServiceController().startRealScreenCapture(resultCode,data,this);
+        }
     }
 
     @Override
     public void startDemoCapture() {
-        getServiceController().startDemoScreenCapture(this);
+        if (getServiceController() != null) {
+            getServiceController().startDemoScreenCapture(this);
+        }
     }
 
     @Override
@@ -232,7 +240,9 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
 
     @Override
     public void onListItemSelected(AbstractMap.SimpleImmutableEntry<String, Long> selectedEntry, String selectedLabel) {
-        getServiceController().requestRestore(selectedEntry.getKey());
+        if (getServiceController() != null) {
+            getServiceController().requestRestore(selectedEntry.getKey());
+        }
     }
 
     @Override
