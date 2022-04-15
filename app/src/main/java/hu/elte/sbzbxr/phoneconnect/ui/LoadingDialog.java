@@ -32,11 +32,4 @@ public class LoadingDialog extends DialogFragment {
         TextView loadingTextView = (TextView) view.findViewById(R.id.loadingTextView);
         loadingTextView.setText(loadingMessage);
     }
-
-    @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-        TextView loadingTextView = (TextView) view.findViewById(R.id.loadingTextView);
-        loadingTextView.setText(loadingMessage);
-    }
 }

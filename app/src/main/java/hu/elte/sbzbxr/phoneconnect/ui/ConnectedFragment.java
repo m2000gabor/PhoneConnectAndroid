@@ -21,7 +21,6 @@ import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.documentfile.provider.DocumentFile;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
@@ -31,7 +30,6 @@ import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import hu.elte.sbzbxr.phoneconnect.controller.MainViewModel;
 import hu.elte.sbzbxr.phoneconnect.databinding.FragmentConnectedBinding;
@@ -77,14 +75,6 @@ public class ConnectedFragment extends Fragment {
 
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        Bundle bundle = getArguments();
-        if(bundle!=null){
-            String ip = bundle.getString(MainActivity.IP_ADDRESS);
-            String port = bundle.getString(MainActivity.PORT);
-            showConnectedUI(ip,port);
-        }else{
-            showConnectedUI(null,null);
-        }
         arrivingFileTransfer=new FileTransferUI(this,binding.includedFileArrivingPanel);
         sendingFileTransfer=new FileTransferUI(this,binding.includedFileSendingPanel);
 
@@ -112,6 +102,13 @@ public class ConnectedFragment extends Fragment {
                         sendingFileTransfer.endOfFile(((Action_LastPieceOfFileSent) networkAction).getField());
                         break;
                 }
+            }
+        });
+
+        viewModel.getUiData().observe(getViewLifecycleOwner(), new Observer<ConnectedFragmentUIData>() {
+            @Override
+            public void onChanged(ConnectedFragmentUIData connectedFragmentUIData) {
+                showConnectedUI(connectedFragmentUIData);
             }
         });
     }
@@ -148,11 +145,10 @@ public class ConnectedFragment extends Fragment {
     }
 
 
-    public void showConnectedUI(@Nullable String ip, @Nullable String port){
-        if(ip != null && port !=null){
-            binding.connectedToLabel.setText(String.format("Connected to: %s:%s", ip, port));
+    public void showConnectedUI(ConnectedFragmentUIData data){
+        if(data.getIp()!=null && data.getPort()!=null){
+            binding.connectedToLabel.setText(String.format("Connected to: %s:%s", data.getIp(),data.getPort()));
         }
-
         //setup buttons
         binding.sendFilesButton.setOnClickListener(v -> showFilePickerDialog());
         binding.pingButton.setOnClickListener(v -> activityCallback.getServiceController().sendPing());
@@ -161,6 +157,7 @@ public class ConnectedFragment extends Fragment {
         binding.disconnectButton.setOnClickListener(v -> activityCallback.getServiceController().disconnectFromServer());
 
         //Setup processes
+        binding.includedScreenSharePanel.screenShareSwitch.setChecked(data.isStreaming());
         binding.includedScreenSharePanel.screenShareSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if(isChecked){
                 startStreamingClicked(binding.includedScreenSharePanel.demoSourceCheckBox.isChecked());
@@ -168,6 +165,7 @@ public class ConnectedFragment extends Fragment {
                 stopScreenCaptureAndRecord();
             }
         });
+        binding.includedScreenSharePanel.slowerNetworkCheckBox.setChecked(data.isLimited());
         binding.includedScreenSharePanel.slowerNetworkCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -177,9 +175,10 @@ public class ConnectedFragment extends Fragment {
                 }else{
                     limiter=ConnectionLimiter.noLimit();
                 }
-                viewModel.getServiceController().setNetworkLimit(limiter);
+                activityCallback.getServiceController().setNetworkLimit(limiter);
             }
         });
+        binding.includedScreenSharePanel.demoSourceCheckBox.setChecked(data.isDemo());
         binding.includedScreenSharePanel.demoSourceCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -195,6 +194,7 @@ public class ConnectedFragment extends Fragment {
             }
         });
 
+        binding.includedNotificationPanel.notificationSwitch.setChecked(data.isNotificationForwarded());
         binding.includedNotificationPanel.notificationSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if(isChecked){
                 startNotificationService();

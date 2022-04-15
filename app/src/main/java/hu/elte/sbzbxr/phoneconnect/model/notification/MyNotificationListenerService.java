@@ -1,22 +1,23 @@
 package hu.elte.sbzbxr.phoneconnect.model.notification;
 
-import android.content.ComponentName;
-import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.os.Binder;
 import android.os.IBinder;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 import android.util.Log;
+
+import androidx.annotation.Nullable;
 
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.NotificationFrame;
 
 public class MyNotificationListenerService extends NotificationListenerService {
     private static final String LOG_TAG = "NotificationListener";
-    private ConnectionManager connectionManager;
+    @Nullable private ConnectionManager connectionManager;
+    private boolean isListening=false;
 
     private NotificationFrame getUsefulData(StatusBarNotification notification){
         CharSequence title =notification.getNotification().extras.getCharSequence("android.title");
@@ -29,7 +30,7 @@ public class MyNotificationListenerService extends NotificationListenerService {
     }
 
     private void sendNotification(StatusBarNotification sbn){
-        if(connectionManager!=null){
+        if(connectionManager !=null){
             connectionManager.sendNotification(getUsefulData(sbn));
         }else{
             Log.d(LOG_TAG,"ConnectionManager is null, but a new notification is posted");
@@ -50,12 +51,6 @@ public class MyNotificationListenerService extends NotificationListenerService {
         return super.onStartCommand(intent, flags, startId);
     }
 
-    @Override
-    public IBinder onBind(Intent intent) {
-        Log.v(LOG_TAG,"NotificationListener bond");
-        return super.onBind(intent);
-    }
-
     //From: https://stackoverflow.com/questions/5841161/get-application-name-from-package-name/29513147
     private String getAppName(String packageName){
         final PackageManager pm = getApplicationContext().getPackageManager();
@@ -71,12 +66,8 @@ public class MyNotificationListenerService extends NotificationListenerService {
     @Override
     public void onListenerConnected() {
         Log.v(LOG_TAG,"NotificationListener connected");
+        isListening=true;
         super.onListenerConnected();
-        //Toast.makeText(getApplicationContext(), "NotificationListener connected", Toast.LENGTH_SHORT).show();
-        if(!mBound){
-            Intent i = new Intent(this, ConnectionManager.class);
-            bindService(i, mConnection, Context.BIND_AUTO_CREATE);
-        }
 
         for(StatusBarNotification notification : getActiveNotifications()){
             sendNotification(notification);
@@ -86,26 +77,29 @@ public class MyNotificationListenerService extends NotificationListenerService {
     @Override
     public void onListenerDisconnected() {
         Log.v(LOG_TAG,"NotificationListener disconnected");
+        isListening=false;
         super.onListenerDisconnected();
     }
 
-
-    boolean mBound=false;
-    private final ServiceConnection mConnection = new ServiceConnection() {
-        // Called when the connection with the service is established
-        public void onServiceConnected(ComponentName className, IBinder service) {
-            // Because we have bound to an explicit
-            // service that is running in our own process, we can
-            // cast its IBinder to a concrete class and directly access it.
-            ConnectionManager.LocalBinder binder = (ConnectionManager.LocalBinder) service;
-            connectionManager = binder.getService();
-            mBound = true;
+    private final IBinder binder = new MyNotificationListenerService.LocalBinder();
+    public class LocalBinder extends Binder {
+        public MyNotificationListenerService getService() {
+            // Return this instance of LocalService so clients can call public methods
+            return MyNotificationListenerService.this;
         }
+    }
 
-        // Called when the connection with the service disconnects unexpectedly
-        public void onServiceDisconnected(ComponentName className) {
-            Log.e("ScreenCapture", "onServiceDisconnected");
-            mBound = false;
-        }
-    };
+    @Override
+    public IBinder onBind(Intent intent) {
+        Log.v(LOG_TAG,"NotificationListener bond");
+        return binder;
+    }
+
+    public void addConnectionManager(ConnectionManager connectionManager) {
+        this.connectionManager = connectionManager;
+    }
+
+    public boolean isListening(){
+        return isListening;
+    }
 }

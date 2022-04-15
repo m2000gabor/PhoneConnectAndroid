@@ -1,40 +1,42 @@
 package hu.elte.sbzbxr.phoneconnect.controller;
 
 import android.app.Application;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
+import android.os.IBinder;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
 import java.net.Socket;
-import java.util.Optional;
+import java.util.logging.Logger;
 
 import hu.elte.sbzbxr.phoneconnect.model.actions.NetworkAction;
 import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.Action_NetworkStateConnected;
-import hu.elte.sbzbxr.phoneconnect.model.actions.helper.ActionType;
 import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.Action_NetworkStateDisconnected;
 import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.NetworkStateAction;
 import hu.elte.sbzbxr.phoneconnect.model.notification.NotificationFilter;
-import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
+import hu.elte.sbzbxr.phoneconnect.ui.ConnectedFragmentUIData;
 
 public class MainViewModel extends AndroidViewModel {
-    private final Application application;
-    private final ServiceController serviceController;
     private MutableLiveData<NetworkAction> incomeAction;
     private MutableLiveData<NetworkStateAction> connectionData;
+    private MutableLiveData<ConnectedFragmentUIData> uiData;
     public final NotificationFilter notificationFilter = new NotificationFilter();
 
     public MainViewModel(@NonNull Application application) {
         super(application);
-        this.application=application;
-        serviceController = new ServiceController(this);
     }
 
     public LiveData<NetworkStateAction> getConnectionData(){
         if (connectionData == null) {
             connectionData = new MutableLiveData<>();
-            loadConnectionData(connectionData, serviceController);
         }
         return connectionData;
     }
@@ -42,24 +44,36 @@ public class MainViewModel extends AndroidViewModel {
     public LiveData<NetworkAction> getActions() {
         if (incomeAction == null) {
             incomeAction = new MutableLiveData<>();
-            loadActions();
         }
         return incomeAction;
     }
 
-    public void bindConnectionManager(MainActivity mainActivity){
-        serviceController.activityBindToConnectionManager(mainActivity);
-    }
-    public void unbindConnectionManager(MainActivity mainActivity) {
-        serviceController.activityUnbindFromConnectionManager(mainActivity);
-    }
-
-
-    private void loadActions() {
-        // Do an asynchronous operation to fetch users.
+    public LiveData<ConnectedFragmentUIData> getUiData() {
+        if (uiData == null) {
+            uiData = new MutableLiveData<>();
+        }
+        return uiData;
     }
 
-    private static void loadConnectionData(MutableLiveData<NetworkStateAction> connectionData, ServiceController serviceController) {
+    private static void loadUiData(MutableLiveData<ConnectedFragmentUIData> uiData,ServiceController serviceController){
+        if(serviceController==null) {
+            Log.d(MainViewModel.class.getName(),"ServiceController is null, cannot fetch uiData");
+        }else{
+            uiData.postValue(serviceController.getConnectedUIData());
+        }
+    }
+
+    public void refreshData(@Nullable ServiceController controller){
+        if(controller==null) return;
+        loadConnectionData(connectionData, controller);
+        loadUiData(uiData,controller);
+    }
+
+    private static void loadConnectionData(MutableLiveData<NetworkStateAction> connectionData,ServiceController serviceController) {
+        if(serviceController==null) {
+            Log.d(MainViewModel.class.getName(),"ServiceController is null, cannot fetch ConnectionData");
+            return;
+        }
         Socket s = serviceController.isConnected();
         if(s!=null){
             connectionData.postValue(new Action_NetworkStateConnected(s.getInetAddress().getHostAddress(),s.getPort()));
@@ -68,17 +82,12 @@ public class MainViewModel extends AndroidViewModel {
         }
     }
 
-    public ServiceController getServiceController() {
-        return serviceController;
-    }
-
     public void postAction(NetworkAction action){
         if(action instanceof NetworkStateAction){
             postNetworkAction((NetworkStateAction) action);
         }else{
             incomeAction.postValue(action);
         }
-
     }
 
     private void postNetworkAction(NetworkStateAction action){

@@ -54,10 +54,9 @@
             android:foregroundServiceType="mediaProjection"
             android:stopWithTask="true" />
         <service
-            android:name=".model.connection.ConnectionManager"
+            android:name=".controller.ServiceController"
             android:enabled="true"
-            android:exported="false"
-            android:stopWithTask="true" />
+            android:exported="false"/>
         <service
             android:name=".model.notification.MyNotificationListenerService"
             android:exported="false"
