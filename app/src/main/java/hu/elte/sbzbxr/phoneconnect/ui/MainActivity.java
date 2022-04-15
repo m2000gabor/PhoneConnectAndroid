@@ -25,7 +25,9 @@ import hu.elte.sbzbxr.phoneconnect.R;
 import hu.elte.sbzbxr.phoneconnect.controller.MainViewModel;
 import hu.elte.sbzbxr.phoneconnect.controller.ServiceController;
 import hu.elte.sbzbxr.phoneconnect.databinding.ActivityMainBinding;
+import hu.elte.sbzbxr.phoneconnect.model.ActionObserver;
 import hu.elte.sbzbxr.phoneconnect.model.actions.Action_FailMessage;
+import hu.elte.sbzbxr.phoneconnect.model.actions.NetworkAction;
 import hu.elte.sbzbxr.phoneconnect.model.actions.helper.ActionType;
 import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.Action_NetworkStateConnected;
 
@@ -61,9 +63,10 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
         startForegroundService(new Intent(this,ServiceController.class));
 
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
-        viewModel.getActions().observe(this, action -> {
-            // update UI
-            switch(action.type){
+        viewModel.getActions().register(new ActionObserver() {
+            @Override
+            public void arrived(NetworkAction action) {
+                switch (action.type){
                 case JUST_CONNECTED:
                     Log.e(TAG,"Shouldnt be called, use LiveData<NetworkStateAction>> instead form serviceController.getConnectionData()!");
                     Action_NetworkStateConnected actionNetworkStateConnected = (Action_NetworkStateConnected) action;
@@ -78,8 +81,9 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
                     break;
                 case FAILED_CONNECT:
                     afterDisconnect();
-                    Toast.makeText(this,"Cannot connect",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this,"Cannot connect",Toast.LENGTH_SHORT).show();
                     break;
+            }
             }
         });
 

@@ -34,6 +34,7 @@ import java.util.List;
 
 import hu.elte.sbzbxr.phoneconnect.controller.MainViewModel;
 import hu.elte.sbzbxr.phoneconnect.databinding.FragmentConnectedBinding;
+import hu.elte.sbzbxr.phoneconnect.model.ActionObserver;
 import hu.elte.sbzbxr.phoneconnect.model.persistance.MyFileDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.persistance.MyPreferenceManager;
 import hu.elte.sbzbxr.phoneconnect.model.persistance.MyUriQuery;
@@ -85,9 +86,9 @@ public class ConnectedFragment extends Fragment {
         sendingFileTransfer=new FileTransferUI(this,binding.includedFileSendingPanel);
 
         viewModel = new ViewModelProvider(requireActivity()).get(MainViewModel.class);
-        viewModel.getActions().observe(getViewLifecycleOwner(), new Observer<NetworkAction>() {
+        viewModel.getActions().register(new ActionObserver() {
             @Override
-            public void onChanged(NetworkAction networkAction) {
+            public void arrived(NetworkAction networkAction) {
                 switch (networkAction.type){
                     case PING_ARRIVED:
                         pingSuccessful(((Action_PingArrived) networkAction).getField());

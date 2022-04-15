@@ -1,5 +1,8 @@
 package hu.elte.sbzbxr.phoneconnect.model;
 
+import android.os.Handler;
+import android.os.Looper;
+
 import java.util.HashSet;
 
 import hu.elte.sbzbxr.phoneconnect.model.actions.NetworkAction;
@@ -12,7 +15,9 @@ public class ActionDelivery {
     }
 
     private void notifyObservers(NetworkAction action){
-        observers.forEach(o -> o.arrived(action));
+        new Handler(Looper.getMainLooper()).post(()->{
+            observers.forEach(o -> o.arrived(action));
+        });
     }
 
     public void register(ActionObserver observer){

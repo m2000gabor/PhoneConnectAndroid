@@ -17,6 +17,7 @@ import androidx.lifecycle.MutableLiveData;
 import java.net.Socket;
 import java.util.logging.Logger;
 
+import hu.elte.sbzbxr.phoneconnect.model.ActionDelivery;
 import hu.elte.sbzbxr.phoneconnect.model.actions.NetworkAction;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_FilePieceArrived;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_LastPieceOfFileArrived;
@@ -31,7 +32,7 @@ import hu.elte.sbzbxr.phoneconnect.model.notification.NotificationFilter;
 import hu.elte.sbzbxr.phoneconnect.ui.ConnectedFragmentUIData;
 
 public class MainViewModel extends AndroidViewModel {
-    private MutableLiveData<NetworkAction> incomeAction;
+    private ActionDelivery incomeAction;
     private MutableLiveData<NetworkStateAction> connectionData;
     private MutableLiveData<ConnectedFragmentUIData> uiData;
     public final NotificationFilter notificationFilter = new NotificationFilter();
@@ -47,9 +48,9 @@ public class MainViewModel extends AndroidViewModel {
         return connectionData;
     }
 
-    public LiveData<NetworkAction> getActions() {
+    public ActionDelivery getActions() {
         if (incomeAction == null) {
-            incomeAction = new MutableLiveData<>();
+            incomeAction = new ActionDelivery();
         }
         return incomeAction;
     }
@@ -94,7 +95,7 @@ public class MainViewModel extends AndroidViewModel {
         if(networkAction instanceof NetworkStateAction){
             postNetworkAction((NetworkStateAction) networkAction);
         }else{
-            incomeAction.postValue(networkAction);
+            incomeAction.post(networkAction);
         }
     }
 
