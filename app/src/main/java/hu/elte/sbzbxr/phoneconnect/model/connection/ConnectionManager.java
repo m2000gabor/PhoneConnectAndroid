@@ -294,6 +294,10 @@ public class ConnectionManager {
         this.viewModel = viewModel;
     }
 
+    public MainViewModel getViewModel() {
+        return viewModel;
+    }
+
     public Context getContext() {
         return context;
     }

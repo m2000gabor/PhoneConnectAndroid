@@ -112,6 +112,7 @@ public class MyNotificationListenerService extends NotificationListenerService {
             controller.getNotificationManager().setNotificationListenerService(MyNotificationListenerService.this);
             mBound = true;
             isStopped=false;
+            controller.refreshData(controller.getConnectionManager().getViewModel());
         }
 
         // Called when the connection with the service disconnects unexpectedly
