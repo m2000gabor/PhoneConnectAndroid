@@ -7,10 +7,12 @@ import android.os.Bundle;
 
 import androidx.annotation.Nullable;
 
+import hu.elte.sbzbxr.phoneconnect.controller.ServiceController;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
 
 public class PickLocationActivity extends Activity {
     private static final int REQUEST_USER_CHOOSE_FOLDER = 3;
+    public static final String CHOOSE_FOLDER = "request the user to choose a folder";
     public static final String FILENAME_TO_CREATE = "filename";
     public static final String FOLDERNAME_TO_CREATE = "foldername";
     public static final String URI_OF_FILE = "uri";
@@ -42,7 +44,8 @@ public class PickLocationActivity extends Activity {
     }
 
     private void sendUri(Uri uri){
-        Intent intent = new Intent(getApplicationContext(), ConnectionManager.class);
+        Intent intent = new Intent(getApplicationContext(), ServiceController.class);
+        intent.setAction(CHOOSE_FOLDER);
         intent.putExtra(URI_OF_FILE,uri);
         intent.putExtra(FILENAME_TO_CREATE,tmpFilename);
         intent.putExtra(FOLDERNAME_TO_CREATE,tmpFolderName);

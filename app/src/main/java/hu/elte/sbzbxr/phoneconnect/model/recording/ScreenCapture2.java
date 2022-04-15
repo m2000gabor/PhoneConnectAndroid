@@ -18,6 +18,7 @@ import android.media.Image;
 import android.media.ImageReader;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
+import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 import android.view.Surface;
@@ -30,6 +31,7 @@ import java.text.DateFormat;
 import java.util.Calendar;
 import java.util.concurrent.TimeUnit;
 
+import hu.elte.sbzbxr.phoneconnect.controller.ServiceController;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 
@@ -40,31 +42,20 @@ public class ScreenCapture2 extends Service {
     MediaProjectionManager mediaProjectionManager;
     VirtualDisplay mVirtualDisplay;
     ImageReader imageReader;
-    ConnectionManager connectionManager;
+    private ServiceController serviceController;
 
     public ScreenCapture2(){}
 
-    @Nullable
+    private final IBinder binder = new ScreenCapture2.LocalBinder();
+    public class LocalBinder extends Binder {
+        public ScreenCapture2 getService() {
+            // Return this instance of LocalService so clients can call public methods
+            return ScreenCapture2.this;
+        }
+    }
     @Override
     public IBinder onBind(Intent intent) {
-        return null;
-    }
-
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        createNotificationChannel();
-        Intent intent1 = new Intent(this, MainActivity.class);
-
-        PendingIntent pendingIntent1 = PendingIntent.getActivity(this, 0, intent1, 0);
-
-        Notification notification1 = new NotificationCompat.Builder(this, "ScreenRecorder")
-                .setContentTitle("Screen capturing")
-                .setContentText("In progress...")
-                .setContentIntent(pendingIntent1).build();
-
-
-        startForeground(1, notification1);
+        return binder;
     }
 
     private void createNotificationChannel() {
@@ -75,8 +66,17 @@ public class ScreenCapture2 extends Service {
     }
 
     @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        super.onStartCommand(intent, flags, startId);
+    public void onDestroy() {
+        imageReader.close();
+        projection.stop();
+        mVirtualDisplay.release();
+        super.onDestroy();
+    }
+
+    public void start(ServiceController controller, Notification notification, Intent intent){
+        this.serviceController=controller;
+        createNotificationChannel();
+        startForeground(1, notification);
         createMediaProjection(
                 intent.getIntExtra("resultCode",0),
                 intent.getParcelableExtra("data"),
@@ -84,21 +84,6 @@ public class ScreenCapture2 extends Service {
                 intent.getIntExtra("metrics_height",-1),
                 intent.getIntExtra("metrics_densityDpi", -1)
         );
-
-        if(!mBound){
-            Intent i = new Intent(this, ConnectionManager.class);
-            bindService(i, mConnection, Context.BIND_AUTO_CREATE);
-        }
-
-        return START_STICKY;
-    }
-
-    @Override
-    public void onDestroy() {
-        imageReader.close();
-        projection.stop();
-        mVirtualDisplay.release();
-        super.onDestroy();
     }
 
     /*
@@ -122,7 +107,7 @@ public class ScreenCapture2 extends Service {
             @Override
             public void onImageAvailable(ImageReader reader) {
                 try (Image im = reader.acquireLatestImage()){
-                    if(im == null || connectionManager==null){return;}
+                    if(im == null){return;}
 
                     long timeStamp_firstSeen = System.currentTimeMillis();
 
@@ -143,7 +128,7 @@ public class ScreenCapture2 extends Service {
                             getScreenShotName(), bitmap, fileBaseName);
                     screenShot.addTimestamp("firstSeen",timeStamp_firstSeen);
                     screenShot.addTimestamp("bitmapCreated",timeStamp_bitmapCreated);
-                    connectionManager.sendScreenShot(screenShot);
+                    serviceController.getConnectionManager().sendScreenShot(screenShot);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -176,24 +161,4 @@ public class ScreenCapture2 extends Service {
     private String getFileExtension(){
         return ".jpg";
     }
-
-    boolean mBound=false;
-    private final ServiceConnection mConnection = new ServiceConnection() {
-        // Called when the connection with the service is established
-        public void onServiceConnected(ComponentName className, IBinder service) {
-            // Because we have bound to an explicit
-            // service that is running in our own process, we can
-            // cast its IBinder to a concrete class and directly access it.
-            ConnectionManager.LocalBinder binder = (ConnectionManager.LocalBinder) service;
-            connectionManager = binder.getService();
-            mBound = true;
-        }
-
-        // Called when the connection with the service disconnects unexpectedly
-        public void onServiceDisconnected(ComponentName className) {
-            Log.e("ScreenCapture", "onServiceDisconnected");
-            mBound = false;
-        }
-    };
-
 }

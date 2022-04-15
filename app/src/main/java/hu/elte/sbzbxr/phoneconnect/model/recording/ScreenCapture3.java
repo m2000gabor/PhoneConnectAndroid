@@ -35,6 +35,7 @@ import java.text.DateFormat;
 import java.util.Calendar;
 
 import hu.elte.sbzbxr.phoneconnect.R;
+import hu.elte.sbzbxr.phoneconnect.controller.ServiceController;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 
@@ -224,8 +225,8 @@ public class ScreenCapture3 extends Service {
             // Because we have bound to an explicit
             // service that is running in our own process, we can
             // cast its IBinder to a concrete class and directly access it.
-            ConnectionManager.LocalBinder binder = (ConnectionManager.LocalBinder) service;
-            connectionManager = binder.getService();
+            ServiceController.LocalBinder binder = (ServiceController.LocalBinder) service;
+            connectionManager = binder.getService().getConnectionManager();
             mBound = true;
         }
 

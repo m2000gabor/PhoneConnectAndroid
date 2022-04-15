@@ -63,10 +63,10 @@ public class FileOutputStreamProvider {
 
     public void createStream(final FileInFolderDescriptor desc, Uri uri) {
         try {
-            DocumentFile pickedDir = DocumentFile.fromTreeUri(connectionManager, uri);
+            DocumentFile pickedDir = DocumentFile.fromTreeUri(connectionManager.getContext(), uri);
             // Create a new file and write into it
             DocumentFile newFile = pickedDir.createFile("*/*", desc.getFilename());
-            OutputStream fileSavingOutputStream = connectionManager.getContentResolver().openOutputStream(newFile.getUri());
+            OutputStream fileSavingOutputStream = connectionManager.getContext().getContentResolver().openOutputStream(newFile.getUri());
             synchronized (map){
                 map.put(desc,fileSavingOutputStream);
                 map.notifyAll();
@@ -81,11 +81,11 @@ public class FileOutputStreamProvider {
 
     private void askForSaveLocation(String filename, String folderName){
         Intent intent = new Intent();
-        intent.setClass(connectionManager.getApplicationContext(), PickLocationActivity.class);
+        intent.setClass(connectionManager.getContext().getApplicationContext(), PickLocationActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.putExtra(FILENAME_TO_CREATE,filename);
         intent.putExtra(FOLDERNAME_TO_CREATE,folderName);
-        connectionManager.startActivity(intent);
+        connectionManager.getContext().startActivity(intent);
     }
 
 }

@@ -3,16 +3,13 @@ package hu.elte.sbzbxr.phoneconnect.model.connection;
 import static hu.elte.sbzbxr.phoneconnect.ui.PickLocationActivity.FILENAME_TO_CREATE;
 import static hu.elte.sbzbxr.phoneconnect.ui.PickLocationActivity.FOLDERNAME_TO_CREATE;
 
-import android.app.Service;
+import android.content.ContentResolver;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.Binder;
 import android.os.Handler;
-import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
-
-import androidx.annotation.Nullable;
 
 import java.io.BufferedOutputStream;
 import java.io.IOException;
@@ -27,7 +24,6 @@ import hu.elte.sbzbxr.phoneconnect.controller.MainViewModel;
 import hu.elte.sbzbxr.phoneconnect.model.actions.Action_FailedToConnect;
 import hu.elte.sbzbxr.phoneconnect.model.persistance.FileInFolderDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.persistance.MyFileDescriptor;
-import hu.elte.sbzbxr.phoneconnect.model.actions.Action_FailMessage;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_FilePieceArrived;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_LastPieceOfFileArrived;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_PingArrived;
@@ -67,34 +63,13 @@ public class ConnectionManager extends Service {
     private final OutgoingBuffer outgoingBuffer=new OutgoingBuffer();
     private MainViewModel viewModel;
     private final FileOutputStreamProvider streamProvider = new FileOutputStreamProvider(this);
+    private final Context context;
 
-    private final IBinder binder = new LocalBinder();
-
-    /**
-     * Class used for the client Binder. Because we know this service always
-     * runs in the same process as its clients, we don't need to deal with IPC.
-     */
-    public class LocalBinder extends Binder {
-        public ConnectionManager getService() {
-            // Return this instance of LocalService so clients can call public methods
-            return ConnectionManager.this;
-        }
+    public ConnectionManager(Context context) {
+        this.context=context;
     }
 
-    @Nullable
-    @Override
-    public IBinder onBind(Intent intent) {
-        return binder;
-    }
-
-    //Empty ctor is required for a Service.
-    public ConnectionManager() {}
-
-    public void setViewModel(MainViewModel mainViewModel){
-        this.viewModel=mainViewModel;
-    }
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
+    public void folderChosen(Intent intent, int flags, int startId) {
         try{
             Uri uri = intent.getParcelableExtra(PickLocationActivity.URI_OF_FILE);
             if(uri !=null){
@@ -105,12 +80,9 @@ public class ConnectionManager extends Service {
         }catch (ClassCastException e){
             Log.d(LOG_TAG,"not a Uri");
         }
-        return super.onStartCommand(intent, flags, startId);
     }
 
-    //
     //From: https://gist.github.com/teocci/0187ac32dcdbd57d8aaa89342be90f89
-
     /**
      * Asynchronously establish a tcp connection with the given server
      */
@@ -242,15 +214,10 @@ public class ConnectionManager extends Service {
     private void restoreFolderListArrived(RestorePostMessageFrame messageFrame){
         viewModel.postAction(new Action_RestoreListAvailable(messageFrame.getBackups()));
         System.out.println("Available restores arrived! ");
-        /*
-        view.runOnUiThread(() -> {
-            view.availableToRestore(messageFrame.getBackups());
-        });*/
     }
 
     private void pingArrived(PingMessageFrame messageFrame){
         viewModel.postAction(new Action_PingArrived(messageFrame.message));
-        //view.successfulPing(messageFrame.message);
         System.out.println("Successful ping! \nReceived message: "+ messageFrame.message);
     }
 
@@ -288,7 +255,7 @@ public class ConnectionManager extends Service {
         fileCutterExecutorService.submit(()->{
             for(MyFileDescriptor myFileDescriptor : files){
                 Log.d(LOG_TAG,"Would send the following file: "+ myFileDescriptor.filename);
-                FileCutter cutter = FileCutterCreator.create(myFileDescriptor,getContentResolver(),fileType, backupId,folderSize);
+                FileCutter cutter = FileCutterCreator.create(myFileDescriptor,getContext().getContentResolver(),fileType, backupId,folderSize);
 
                 //sending
                 while (!cutter.isEnd()){
@@ -321,5 +288,13 @@ public class ConnectionManager extends Service {
         limiter.stop();
         limiter = l;
         limiter.start();
+    }
+
+    public void setViewModel(MainViewModel viewModel) {
+        this.viewModel = viewModel;
+    }
+
+    public Context getContext() {
+        return context;
     }
 }

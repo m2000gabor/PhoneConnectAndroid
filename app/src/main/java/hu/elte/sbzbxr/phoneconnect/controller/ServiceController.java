@@ -1,16 +1,22 @@
 package hu.elte.sbzbxr.phoneconnect.controller;
 
-import android.content.ComponentName;
-import android.content.Context;
-import android.content.Intent;
-import android.content.ServiceConnection;
-import android.os.IBinder;
+import static hu.elte.sbzbxr.phoneconnect.ui.PickLocationActivity.CHOOSE_FOLDER;
 
-import androidx.lifecycle.Observer;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.PendingIntent;
+import android.app.Service;
+import android.content.Intent;
+import android.os.Binder;
+import android.os.IBinder;
+import android.util.Log;
+
+import androidx.core.app.NotificationCompat;
 
 import java.net.Socket;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.NetworkStateAction;
 import hu.elte.sbzbxr.phoneconnect.model.persistance.MyFileDescriptor;
@@ -21,6 +27,7 @@ import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.message.Message
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.message.MessageType;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.message.PingMessageFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.message.StartRestoreMessageFrame;
+import hu.elte.sbzbxr.phoneconnect.ui.ConnectedFragmentUIData;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 
 /**
@@ -37,25 +44,61 @@ public class ServiceController {
     private final MainViewModel viewModel;
 
 
-    public ServiceController(MainViewModel viewModel) { this.viewModel=viewModel;}
+        notification = new NotificationCompat.Builder(this, "ServiceController")
+                .setContentTitle("Phone Connect")
+                .setContentText("Running...")
+                .setContentIntent(pendingIntent).build();
 
-    public void startRealScreenCapture(int resultCode, Intent data, MainActivity mainActivity){
+
+        startForeground(1, notification);
+    }
+
+    private void createNotificationChannel() {
+        NotificationChannel channel = new NotificationChannel("ServiceController", "Service controller",
+                android.app.NotificationManager.IMPORTANCE_HIGH);
+        android.app.NotificationManager manager = getSystemService(android.app.NotificationManager.class);
+        manager.createNotificationChannel(channel);
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.d(LOG_TAG, "serviceController started");
+        if(Objects.equals(intent.getAction(), CHOOSE_FOLDER)){
+            connectionManager.folderChosen(intent, flags, startId);
+        }
+        return START_STICKY; // If we get killed, after returning from here, restart
+    }
+
+    @Override
+    public void onDestroy() {
+        Log.d(LOG_TAG, "serviceController destroyed");
+    }
+
+    public void refreshData(MainViewModel viewModel) {
+        connectionManager.setViewModel(viewModel);
+        viewModel.refreshData(this);
+    }
+
+    public void startRealScreenCapture(int resultCode, Intent data, MainActivity mainActivity) {
         connectionManager.sendMessage(new MessageFrame(MessageType.START_OF_STREAM));
         if(screenCaptureBuilder==null){screenCaptureBuilder=new ScreenCaptureBuilder(mainActivity);}
         screenCaptureBuilder.startRealLive(resultCode,data);
     }
-    public void startDemoScreenCapture(MainActivity mainActivity){
-        if(screenCaptureBuilder==null){screenCaptureBuilder=new ScreenCaptureBuilder(mainActivity);}
-        screenCaptureBuilder.startDemo();
-    }
-    public void stopScreenCapture(){
-        if(screenCaptureBuilder != null) screenCaptureBuilder.stop();
-        if(connectionManager != null) connectionManager.sendMessage(new MessageFrame(MessageType.END_OF_STREAM));
+
+    public void startDemoScreenCapture(MainActivity mainActivity) {
+        screenCaptureManager.startDemo(this,mainActivity);
     }
 
-    public boolean connectToServer(String ip, int port){
-        boolean valid =validate_ip_port();
-        if(valid){connectionManager.connect(ip,port);}
+    public void stopScreenCapture() {
+        screenCaptureManager.stop();
+        connectionManager.sendMessage(new MessageFrame(MessageType.END_OF_STREAM));
+    }
+
+    public boolean connectToServer(String ip, int port) {
+        boolean valid = validate_ip_port();
+        if (valid) {
+            connectionManager.connect(ip, port);
+        }
         return valid;
     }
 
@@ -64,80 +107,84 @@ public class ServiceController {
         return true;
     }
 
-    public void disconnectFromServer(){
-        if(screenCaptureBuilder!=null){screenCaptureBuilder.stop();}
+    public void disconnectFromServer() {
+        screenCaptureManager.stop();
         connectionManager.disconnect();
     }
 
-    public void startNotificationListening(MainActivity mainActivity){NotificationManager.start(mainActivity);}
-    public void stopNotificationListening(MainActivity mainActivity){NotificationManager.stop(mainActivity);}
-
-    public void sendPing(){connectionManager.sendMessage(new PingMessageFrame("Hello server"));}
-    public void askRestoreList(){connectionManager.sendMessage(new MessageFrame(MessageType.RESTORE_GET_AVAILABLE));}
-    public void requestRestore(String restoreID){connectionManager.sendMessage(new StartRestoreMessageFrame(restoreID));}
-
-    public void activityBindToConnectionManager(MainActivity mainActivity){
-        Intent intent = new Intent(mainActivity, ConnectionManager.class);
-        if(connectionManager==null){mainActivity.startService(intent);}//if this is the first call, we need to start the service
-        if(!connectionManagerIsBound){
-            mainActivity.bindService(intent, networkServiceConnection, Context.BIND_IMPORTANT);
-        }
+    public void startNotificationListening(MainActivity mainActivity) {
+        notificationManager.start(this);
     }
 
-    public void activityUnbindFromConnectionManager(MainActivity mainActivity){
-        if(connectionManagerIsBound && connectionManager!=null){
-            mainActivity.unbindService(networkServiceConnection);
-            connectionManagerIsBound = false;
-        }
+    public void stopNotificationListening(MainActivity mainActivity) {
+        notificationManager.stop(this);
     }
 
-    private final ServiceConnection networkServiceConnection = new ServiceConnection() {
+    public void sendPing() {
+        connectionManager.sendMessage(new PingMessageFrame("Hello server"));
+    }
 
-        @Override
-        public void onServiceConnected(ComponentName className,
-                                       IBinder service) {
-            // We've bound to LocalService, cast the IBinder and get LocalService instance
-            ConnectionManager.LocalBinder binder = (ConnectionManager.LocalBinder) service;
-            connectionManager = binder.getService();
-            connectionManager.setViewModel(viewModel);
-            connectionManagerIsBound = true;
-            //startNotificationListening();
-        }
+    public void askRestoreList() {
+        connectionManager.sendMessage(new MessageFrame(MessageType.RESTORE_GET_AVAILABLE));
+    }
 
-        @Override
-        public void onServiceDisconnected(ComponentName arg0) {
-            connectionManagerIsBound = false;
-        }
-    };
-
+    public void requestRestore(String restoreID) {
+        connectionManager.sendMessage(new StartRestoreMessageFrame(restoreID));
+    }
 
     public void startFileTransfer(MyFileDescriptor myFileDescriptor) {
-        //Log.d("To send",myFileDescriptor.filename);
-        connectionManager.sendFiles(Collections.singletonList(myFileDescriptor), FrameType.FILE,null,0);
+        connectionManager.sendFiles(Collections.singletonList(myFileDescriptor), FrameType.FILE, null, 0);
     }
     ///document/primary:Download/PhoneConnect/kb_jk_igazolas_december30.pdf
     ///external/images/media/112
 
     public void sendBackupFiles(List<MyFileDescriptor> myFileDescriptors, String backupId, Long folderSize) {
         //Log.d("To send",myFileDescriptor.filename);
-        connectionManager.sendFiles(myFileDescriptors, FrameType.BACKUP_FILE,backupId,folderSize);
+        connectionManager.sendFiles(myFileDescriptors, FrameType.BACKUP_FILE, backupId, folderSize);
     }
 
     /**
-     *
      * @return the socket if connected, null otherwise
      */
-    public Socket isConnected(){
-        if(connectionManager ==null){
-            return null;
-        }else{
-         return connectionManager.getSocket();
-        }
+    public Socket isConnected() {
+        return connectionManager.getSocket();
     }
 
-    public void setNetworkLimit(ConnectionLimiter limiter){
-        if(connectionManager!=null){
-            connectionManager.setLimiter(limiter);
+    public void setNetworkLimit(ConnectionLimiter limiter) {
+        connectionManager.setLimiter(limiter);
+    }
+
+    public ConnectionManager getConnectionManager() {
+        return connectionManager;
+    }
+
+    public ScreenCaptureManager getScreenCaptureManager() {
+        return screenCaptureManager;
+    }
+
+    public NotificationManager getNotificationManager() {
+        return notificationManager;
+    }
+
+    public Notification getNotification() {
+        return notification;
+    }
+
+    public ConnectedFragmentUIData getConnectedUIData(){
+        Socket s = isConnected();
+        String ip = null;
+        String port = null;
+        if(s!=null){
+            ip=s.getInetAddress().getHostAddress();
+            port = String.valueOf(s.getPort());
         }
+        return new ConnectedFragmentUIData(
+                ip,
+                port,
+                screenCaptureManager.isRunning(),
+                notificationManager.isListening(),
+                false,
+                false
+        );
     }
 }

@@ -11,12 +11,17 @@ import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 import android.util.Log;
 
+import androidx.annotation.Nullable;
+
+import hu.elte.sbzbxr.phoneconnect.controller.ServiceController;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.NotificationFrame;
 
 public class MyNotificationListenerService extends NotificationListenerService {
     private static final String LOG_TAG = "NotificationListener";
-    private ConnectionManager connectionManager;
+    @Nullable private ServiceController controller;
+    private boolean isListening=false;
+    private boolean isStopped=false;
 
     private NotificationFrame getUsefulData(StatusBarNotification notification){
         CharSequence title =notification.getNotification().extras.getCharSequence("android.title");
@@ -29,8 +34,8 @@ public class MyNotificationListenerService extends NotificationListenerService {
     }
 
     private void sendNotification(StatusBarNotification sbn){
-        if(connectionManager!=null){
-            connectionManager.sendNotification(getUsefulData(sbn));
+        if(controller!=null){
+            controller.getConnectionManager().sendNotification(getUsefulData(sbn));
         }else{
             Log.d(LOG_TAG,"ConnectionManager is null, but a new notification is posted");
         }
@@ -39,6 +44,7 @@ public class MyNotificationListenerService extends NotificationListenerService {
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
         if(sbn.isOngoing()){return;}
+        if(isStopped){Log.e(LOG_TAG,"NotificationListener already stopped."); return;}
         Log.v(LOG_TAG,"Just get posted: "+sbn.getNotification().toString());
         sendNotification(sbn);
         super.onNotificationPosted(sbn);
@@ -47,6 +53,7 @@ public class MyNotificationListenerService extends NotificationListenerService {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.v(LOG_TAG,"NotificationListener started");
+        isStopped=false;
         return super.onStartCommand(intent, flags, startId);
     }
 
@@ -72,10 +79,12 @@ public class MyNotificationListenerService extends NotificationListenerService {
     public void onListenerConnected() {
         Log.v(LOG_TAG,"NotificationListener connected");
         super.onListenerConnected();
-        //Toast.makeText(getApplicationContext(), "NotificationListener connected", Toast.LENGTH_SHORT).show();
+        isListening=true;
+        isStopped=false;
+
         if(!mBound){
-            Intent i = new Intent(this, ConnectionManager.class);
-            bindService(i, mConnection, Context.BIND_AUTO_CREATE);
+            Intent i = new Intent(this, ServiceController.class);
+            bindService(i, mConnection, Context.BIND_IMPORTANT);
         }
 
         for(StatusBarNotification notification : getActiveNotifications()){
@@ -86,9 +95,10 @@ public class MyNotificationListenerService extends NotificationListenerService {
     @Override
     public void onListenerDisconnected() {
         Log.v(LOG_TAG,"NotificationListener disconnected");
+        isListening=false;
+        isStopped=true;
         super.onListenerDisconnected();
     }
-
 
     boolean mBound=false;
     private final ServiceConnection mConnection = new ServiceConnection() {
@@ -97,15 +107,29 @@ public class MyNotificationListenerService extends NotificationListenerService {
             // Because we have bound to an explicit
             // service that is running in our own process, we can
             // cast its IBinder to a concrete class and directly access it.
-            ConnectionManager.LocalBinder binder = (ConnectionManager.LocalBinder) service;
-            connectionManager = binder.getService();
+            ServiceController.LocalBinder binder = (ServiceController.LocalBinder) service;
+            controller = binder.getService();
+            controller.getNotificationManager().setNotificationListenerService(MyNotificationListenerService.this);
             mBound = true;
+            isStopped=false;
         }
 
         // Called when the connection with the service disconnects unexpectedly
         public void onServiceDisconnected(ComponentName className) {
             Log.e("ScreenCapture", "onServiceDisconnected");
             mBound = false;
+            controller.getNotificationManager().setNotificationListenerService(null);
+            controller = null;
+            isStopped=true;
         }
     };
+
+    public boolean isListening(){
+        return isListening && !isStopped;
+    }
+
+    public void stop(){
+        isStopped=true;
+        stopSelf();
+    }
 }

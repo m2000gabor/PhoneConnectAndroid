@@ -1,8 +1,12 @@
 package hu.elte.sbzbxr.phoneconnect.ui;
 
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -16,7 +20,6 @@ import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.ViewModelProvider;
 
 import java.util.AbstractMap;
-import java.util.Optional;
 
 import hu.elte.sbzbxr.phoneconnect.R;
 import hu.elte.sbzbxr.phoneconnect.controller.MainViewModel;
@@ -54,6 +57,8 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
         setSupportActionBar(myToolbar);
         myToolbar.setTitle("Phone Connect");
         myToolbar.setTitleTextColor(Color.WHITE);
+
+        startForegroundService(new Intent(this,ServiceController.class));
 
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
         viewModel.getActions().observe(this, action -> {
@@ -133,8 +138,10 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
 
     private void afterDisconnect(){
         try {
-            getServiceController().stopNotificationListening(this);
-            getServiceController().stopScreenCapture();
+            if(getServiceController()!=null){
+                getServiceController().stopNotificationListening(this);
+                getServiceController().stopScreenCapture();
+            }
             FragmentManager fragmentManager = getSupportFragmentManager();
             fragmentManager.beginTransaction()
                     .replace(FRAGMENT_CONTAINER_ID, ToConnectFragment.class, null, TO_CONNECT_FRAGMENT_TAG)
@@ -146,21 +153,44 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
         }
     }
 
-
     @Override
     protected void onStart() {
         super.onStart();
-        viewModel.bindConnectionManager(this);
+        Intent intent = new Intent(this, ServiceController.class);
+        bindService(intent, connection, Context.BIND_IMPORTANT);
     }
 
     @Override
     protected void onStop() {
-        viewModel.unbindConnectionManager(this);
+        unbindService(connection);
+        mBound = false;
         super.onStop();
     }
 
+    @Nullable private ServiceController serviceController;
+    private boolean mBound = false;
+    private final ServiceConnection connection = new ServiceConnection() {
+
+        @Override
+        public void onServiceConnected(ComponentName className,
+                                       IBinder service) {
+            // We've bound to LocalService, cast the IBinder and get LocalService instance
+            ServiceController.LocalBinder binder = (ServiceController.LocalBinder) service;
+            serviceController = binder.getService();
+            serviceController.refreshData(viewModel);
+            mBound = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName arg0) {
+            mBound = false;
+            serviceController = null;
+        }
+    };
+
+    @Override @Nullable
     public ServiceController getServiceController() {
-        return viewModel.getServiceController();
+        return serviceController;
     }
 
     @Override
@@ -168,28 +198,32 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
         super.onActivityResult(requestCode, resultCode, data);
     }
 
-    public Optional<ConnectedFragment> getConnectedFragment(){
-        return Optional.ofNullable((ConnectedFragment) getSupportFragmentManager().findFragmentByTag(CONNECTED_FRAGMENT_TAG));
-    }
-
     @Override
     public void startNotificationListening() {
-        viewModel.getServiceController().startNotificationListening(this);
+        if (getServiceController() != null) {
+            getServiceController().startNotificationListening(this);
+        }
     }
 
     @Override
     public void stopNotificationListening() {
-        viewModel.getServiceController().stopNotificationListening(this);
+        if (getServiceController() != null) {
+            getServiceController().stopNotificationListening(this);
+        }
     }
 
     @Override
     public void startScreenCapture(int resultCode, Intent data) {
-        viewModel.getServiceController().startRealScreenCapture(resultCode,data,this);
+        if (getServiceController() != null) {
+            getServiceController().startRealScreenCapture(resultCode,data,this);
+        }
     }
 
     @Override
     public void startDemoCapture() {
-        viewModel.getServiceController().startDemoScreenCapture(this);
+        if (getServiceController() != null) {
+            getServiceController().startDemoScreenCapture(this);
+        }
     }
 
     @Override
@@ -206,11 +240,19 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
 
     @Override
     public void onListItemSelected(AbstractMap.SimpleImmutableEntry<String, Long> selectedEntry, String selectedLabel) {
-        getServiceController().requestRestore(selectedEntry.getKey());
+        if (getServiceController() != null) {
+            getServiceController().requestRestore(selectedEntry.getKey());
+        }
     }
 
     @Override
     public void onRestoreCancelled() {
         System.err.println("User cancelled");
+    }
+
+    @Override
+    protected void onDestroy() {
+        stopService(new Intent(this,ServiceController.class));
+        super.onDestroy();
     }
 }
