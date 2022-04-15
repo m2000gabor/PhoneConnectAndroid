@@ -34,15 +34,41 @@ import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
  * Responsible to start and stop services from mainActivity. Changes the services' lifecycle state.
  * It's more likely to be a collection of the individual service manager classes, than
  * an ultimate responsible for all service work class.
- *
  */
-public class ServiceController {
-    private static final String LOG_TAG="ServiceController";
-    private ConnectionManager connectionManager;
-    private ScreenCaptureBuilder screenCaptureBuilder;
-    boolean connectionManagerIsBound = false;
-    private final MainViewModel viewModel;
+public class ServiceController extends Service {
+    private static final String LOG_TAG = "ServiceController";
+    private final ConnectionManager connectionManager = new ConnectionManager(this);
+    private final ScreenCaptureManager screenCaptureManager = new ScreenCaptureManager(this);
+    private final NotificationManager notificationManager = new NotificationManager(this);
 
+    // Binder given to clients
+    private final IBinder binder = new LocalBinder();
+
+    /**
+     * Class used for the client Binder.  Because we know this service always
+     * runs in the same process as its clients, we don't need to deal with IPC.
+     */
+    public class LocalBinder extends Binder {
+        public ServiceController getService() {
+            // Return this instance of LocalService so clients can call public methods
+            return ServiceController.this;
+        }
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return binder;
+    }
+
+    private Notification notification;
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        //For handler and looper and multi-thread: https://developer.android.com/guide/components/services
+        createNotificationChannel();
+        Intent intent1 = new Intent(this, MainActivity.class);
+
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent1, 0);
 
         notification = new NotificationCompat.Builder(this, "ServiceController")
                 .setContentTitle("Phone Connect")

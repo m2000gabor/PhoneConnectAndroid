@@ -52,7 +52,7 @@ import hu.elte.sbzbxr.phoneconnect.ui.PickLocationActivity;
  * Manages the different types of outgoing and ingoing requests.
  * Establish and destroy the connection with the Windows side server app.
  */
-public class ConnectionManager extends Service {
+public class ConnectionManager {
     private static final String LOG_TAG = "ConnectionManager";
     private boolean isListening = false;
     private boolean isSending = false;
