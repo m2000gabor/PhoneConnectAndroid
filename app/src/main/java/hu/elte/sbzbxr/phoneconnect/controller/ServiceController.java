@@ -18,7 +18,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.NetworkStateAction;
 import hu.elte.sbzbxr.phoneconnect.model.persistance.MyFileDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionLimiter;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
@@ -107,8 +106,7 @@ public class ServiceController extends Service {
 
     public void startRealScreenCapture(int resultCode, Intent data, MainActivity mainActivity) {
         connectionManager.sendMessage(new MessageFrame(MessageType.START_OF_STREAM));
-        if(screenCaptureBuilder==null){screenCaptureBuilder=new ScreenCaptureBuilder(mainActivity);}
-        screenCaptureBuilder.startRealLive(resultCode,data);
+        screenCaptureManager.startRealLive(mainActivity, resultCode, data);
     }
 
     public void startDemoScreenCapture(MainActivity mainActivity) {
