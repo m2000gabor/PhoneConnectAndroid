@@ -1,5 +1,7 @@
 package hu.elte.sbzbxr.phoneconnect.ui;
 
+import java.util.Objects;
+
 public class ConnectedFragmentUIData {
     private final String ip;
     private final String port;
@@ -40,5 +42,18 @@ public class ConnectedFragmentUIData {
 
     public boolean isLimited() {
         return isLimited;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ConnectedFragmentUIData data = (ConnectedFragmentUIData) o;
+        return isStreaming == data.isStreaming && isNotification == data.isNotification && isDemo == data.isDemo && isLimited == data.isLimited && Objects.equals(ip, data.ip) && Objects.equals(port, data.port);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(ip, port, isStreaming, isNotification, isDemo, isLimited);
     }
 }

@@ -70,6 +70,8 @@ public class ConnectedFragment extends Fragment {
         super.onAttach(context);
         try {
             activityCallback = (MainActivityCallback) context;
+            viewModel = new ViewModelProvider(requireActivity()).get(MainViewModel.class);
+            viewModel.refreshData(activityCallback.getServiceController());
         } catch (ClassCastException castException) {
             Log.e(TAG, castException.getMessage());
         }
@@ -106,9 +108,7 @@ public class ConnectedFragment extends Fragment {
         arrivingFileTransfer=new FileTransferUI(this,binding.includedFileArrivingPanel);
         sendingFileTransfer=new FileTransferUI(this,binding.includedFileSendingPanel);
 
-        viewModel = new ViewModelProvider(requireActivity()).get(MainViewModel.class);
         viewModel.getActions().register(actionObserver);
-
         viewModel.getUiData().observe(getViewLifecycleOwner(), new Observer<ConnectedFragmentUIData>() {
             @Override
             public void onChanged(ConnectedFragmentUIData connectedFragmentUIData) {

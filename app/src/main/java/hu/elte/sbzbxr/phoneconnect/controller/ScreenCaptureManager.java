@@ -53,7 +53,9 @@ public class ScreenCaptureManager {
         try {
             if(mBound) serviceController.unbindService(connection);
         }catch (IllegalArgumentException e){
-            e.printStackTrace();
+            //e.printStackTrace();
+            mBound = false;
+            screenCapture2 = null;
         }
     }
 

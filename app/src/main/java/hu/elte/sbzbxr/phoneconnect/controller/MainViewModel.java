@@ -66,7 +66,10 @@ public class MainViewModel extends AndroidViewModel {
         if(serviceController==null) {
             Log.d(MainViewModel.class.getName(),"ServiceController is null, cannot fetch uiData");
         }else{
-            uiData.postValue(serviceController.getConnectedUIData());
+            ConnectedFragmentUIData newestData = serviceController.getConnectedUIData();
+            if(!newestData.equals(uiData.getValue())){
+                uiData.postValue(newestData);
+            }
         }
     }
 
@@ -83,11 +86,17 @@ public class MainViewModel extends AndroidViewModel {
             Log.d(MainViewModel.class.getName(),"ServiceController is null, cannot fetch ConnectionData");
             return;
         }
+        NetworkStateAction oldVal = connectionData.getValue();
+        NetworkStateAction newVal;
         Socket s = serviceController.isConnected();
         if(s!=null){
-            connectionData.postValue(new Action_NetworkStateConnected(s.getInetAddress().getHostAddress(),s.getPort()));
+            newVal=new Action_NetworkStateConnected(s.getInetAddress().getHostAddress(),s.getPort());
         }else{
-            connectionData.postValue(new Action_NetworkStateDisconnected());
+            newVal=new Action_NetworkStateDisconnected();
+        }
+
+        if(oldVal==null || oldVal.getType()!=newVal.getType()){
+            connectionData.postValue(newVal);
         }
     }
 
