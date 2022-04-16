@@ -9,6 +9,7 @@ import java.io.IOException;
 
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.FrameType;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.NetworkFrame;
+import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.message.PingMessageFrame;
 
 public class FrameSender {
     private static final String LOG_TAG = "MyFrameSender";
@@ -17,6 +18,7 @@ public class FrameSender {
 
     public static void send(ConnectionLimiter limiter, BufferedOutputStream out, NetworkFrame networkFrame) {
         if(networkFrame.type == FrameType.SEGMENT){((ScreenShotFrame)networkFrame).getScreenShot().addTimestamp("beforeSerialize",System.currentTimeMillis());}
+        if(networkFrame instanceof PingMessageFrame){((PingMessageFrame)networkFrame).rightBeforeRequest();}
         byte[] toWrite = networkFrame.serialize().getAsBytes();
         if(networkFrame.type == FrameType.SEGMENT){((ScreenShotFrame)networkFrame).getScreenShot().addTimestamp("afterSerialization",System.currentTimeMillis());}
         if(toWrite==null){

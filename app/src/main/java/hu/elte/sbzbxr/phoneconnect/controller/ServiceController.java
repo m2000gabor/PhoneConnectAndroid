@@ -145,7 +145,7 @@ public class ServiceController extends Service {
     }
 
     public void sendPing() {
-        connectionManager.sendMessage(new PingMessageFrame("Hello server"));
+        connectionManager.sendMessage(new PingMessageFrame("Request latency from Phone"));
     }
 
     public void askRestoreList() {

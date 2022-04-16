@@ -247,8 +247,9 @@ public class ConnectionManager {
     }
 
     private void pingArrived(PingMessageFrame messageFrame){
-        viewModel.postAction(new Action_PingArrived(messageFrame.message));
-        System.out.println("Successful ping! \nReceived message: "+ messageFrame.message);
+        messageFrame.answerArrived();
+        viewModel.postAction(new Action_PingArrived("Round-trip latency: "+messageFrame.calculateLatency()+"ms"));
+        System.out.println("Successful ping! \nReceived: "+ messageFrame.toString());
     }
 
     private void startSendingThread(){
