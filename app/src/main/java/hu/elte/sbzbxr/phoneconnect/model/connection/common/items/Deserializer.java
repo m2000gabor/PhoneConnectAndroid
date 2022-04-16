@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
-//version 1.3
+//version 1.4
 public class Deserializer {
     private final InputStream inputStream;
 
@@ -44,5 +44,15 @@ public class Deserializer {
         if(readBytes!=8){throw new IOException("Invalid structure");}
         ByteBuffer bb = ByteBuffer.wrap(len);
         return bb.getLong();
+    }
+
+    public static long getLong(byte[] arr) throws IOException {
+        if(arr.length!=8){throw new IOException("Invalid structure");}
+        ByteBuffer bb = ByteBuffer.wrap(arr);
+        return bb.getLong();
+    }
+
+    public boolean getBool() throws IOException {
+        return getInt() > 0;
     }
 }

@@ -3,7 +3,6 @@ package hu.elte.sbzbxr.phoneconnect.model.connection;
 import static hu.elte.sbzbxr.phoneconnect.ui.PickLocationActivity.FILENAME_TO_CREATE;
 import static hu.elte.sbzbxr.phoneconnect.ui.PickLocationActivity.FOLDERNAME_TO_CREATE;
 
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -15,7 +14,12 @@ import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -57,8 +61,10 @@ public class ConnectionManager {
     private boolean isListening = false;
     private boolean isSending = false;
     private ConnectionLimiter limiter = ConnectionLimiter.noLimit();
-    private Socket socket;
-    private BufferedOutputStream out;
+
+    private Socket tcpSocket;
+    private BufferedOutputStream tcpOutStream;
+
     private InputStream in;
     private final OutgoingBuffer outgoingBuffer=new OutgoingBuffer();
     private MainViewModel viewModel;
@@ -92,7 +98,7 @@ public class ConnectionManager {
             return;
         }
         // Connect to the server
-        startAsyncTask(new ConnectionCreator(out,in,ip,port,this));
+        startAsyncTask(new ConnectionCreator(tcpOutStream,in,ip,port,this));
     }
 
     //From: https://www.simplifiedcoding.net/android-asynctask/
@@ -110,8 +116,8 @@ public class ConnectionManager {
             isListening =false;
             isSending =false;
             if(in!=null) in.close();
-            if(out!=null) out.close();
-            if(socket!=null) socket.close();
+            if(tcpOutStream !=null) tcpOutStream.close();
+            if(tcpSocket !=null) tcpSocket.close();
             viewModel.postAction(new Action_NetworkStateDisconnected());
             outgoingBuffer.clear();
         } catch (IOException e) {
@@ -131,11 +137,11 @@ public class ConnectionManager {
         if(!successful){
             viewModel.postAction(new Action_FailedToConnect(ip+":"+port));
         }else{
-            socket=s;
+            tcpSocket =s;
             in=i;
-            out=o;
+            tcpOutStream =o;
             viewModel.postAction(new Action_NetworkStateConnected(ip,port));
-            if (out == null) {
+            if (tcpOutStream == null) {
                 System.err.println("But its null!!");
             }
             System.out.println("Successful connection establishment");
@@ -143,6 +149,30 @@ public class ConnectionManager {
             isSending=true;
             listen();
             startSendingThread();
+
+            initUdp(ip);
+        }
+    }
+
+    private DatagramSocket udpSocket;
+    private InetAddress address;
+    private static final int UDP_SERVER_PORT = 4445;
+    private void initUdp(String ip) {
+        try {
+            udpSocket=new DatagramSocket();
+        } catch (SocketException e) {
+            e.printStackTrace();
+        }
+        address=new InetSocketAddress(ip,UDP_SERVER_PORT).getAddress();
+    }
+
+
+    private void sendWithUdp(NetworkFrame frame) {
+        try {
+            UdpSender.send(limiter,udpSocket,address,UDP_SERVER_PORT,frame);
+        } catch (IOException e) {
+            e.printStackTrace();
+            Log.e(LOG_TAG, "Failed to send segment");
         }
     }
 
@@ -226,7 +256,11 @@ public class ConnectionManager {
             while(isSending){
                 NetworkFrame sendable = outgoingBuffer.take();
                 if(sendable!=null){
-                    FrameSender.send(limiter,out,sendable);
+                    if(sendable.type==FrameType.SEGMENT){
+                        sendWithUdp(sendable);
+                    }else{
+                        FrameSender.send(limiter, tcpOutStream,sendable);
+                    }
                 }else{
                     Log.d(LOG_TAG,"Got null from buffer");
                 }
@@ -280,8 +314,8 @@ public class ConnectionManager {
         compressToJPGExecutorService.submit(screenShotFrame::transform);
     }
 
-    public Socket getSocket() {
-        return socket;
+    public Socket getTcpSocket() {
+        return tcpSocket;
     }
 
     public void setLimiter(ConnectionLimiter l) {

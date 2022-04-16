@@ -171,7 +171,7 @@ public class ServiceController extends Service {
      * @return the socket if connected, null otherwise
      */
     public Socket isConnected() {
-        return connectionManager.getSocket();
+        return connectionManager.getTcpSocket();
     }
 
     public void setNetworkLimit(ConnectionLimiter limiter) {

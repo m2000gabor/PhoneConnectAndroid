@@ -2,7 +2,7 @@ package hu.elte.sbzbxr.phoneconnect.model.connection.common.items;
 
 /**
  * @implNote should be the same for both Windows and Android part
- * @version 1.2
+ * @version 1.3
  */
 public enum FrameType{
     INVALID(0),
@@ -11,7 +11,8 @@ public enum FrameType{
     NOTIFICATION(3),
     FILE(4),
     RESTORE_FILE(5),
-    BACKUP_FILE(6);
+    BACKUP_FILE(6),
+    SEGMENT_PART_UDP(7);
 
     public final byte v;
 

@@ -26,7 +26,7 @@ public class FrameTest {
 
     @Test
     public void basicBackupFrameTest() throws IOException {
-        BackupFileFrame before = new BackupFileFrame(FrameType.FILE,"filename",(long)"data".getBytes().length,"data".getBytes(),"folderName",1L);
+        BackupFileFrame before = new BackupFileFrame(FrameType.FILE,"filename",(long)"data".getBytes().length, "folderName", 1L, "data".getBytes());
         byte[] transformed = before.serialize().getAsBytes();
         ByteArrayInputStream inputStream = new ByteArrayInputStream(transformed);
         FrameType readType = NetworkFrameCreator.getType(inputStream); //readType
@@ -43,7 +43,7 @@ public class FrameTest {
 
     @Test
     public void basicSegmentFrameTest() throws IOException {
-        SegmentFrame before = new SegmentFrame("filename","data".getBytes(),"folderName");
+        SegmentFrame before = new SegmentFrame("filename", "folderName", "data".getBytes());
         byte[] transformed = before.serialize().getAsBytes();
         ByteArrayInputStream inputStream = new ByteArrayInputStream(transformed);
         FrameType readType = NetworkFrameCreator.getType(inputStream); //readType

@@ -61,13 +61,13 @@ public class FileCutter {
                 switch (fileType){
                     case BACKUP_FILE:
                     case RESTORE_FILE:
-                        current = new BackupFileFrame(fileType,filename,fileTotalSize,byteArrayOutputStream.toByteArray(), folderName,folderSize);
+                        current = new BackupFileFrame(fileType,filename,fileTotalSize, folderName, folderSize, byteArrayOutputStream.toByteArray());
                         break;
                     case FILE:
-                        current = new FileFrame(fileType,filename,fileTotalSize,byteArrayOutputStream.toByteArray(), null, 0L);
+                        current = new FileFrame(fileType,filename,fileTotalSize, null, 0L,byteArrayOutputStream.toByteArray());
                         break;
                     case SEGMENT:
-                        current = new SegmentFrame(filename,byteArrayOutputStream.toByteArray(), folderName);
+                        current = new SegmentFrame(filename, folderName, byteArrayOutputStream.toByteArray());
                         break;
                 }
             }
@@ -83,9 +83,9 @@ public class FileCutter {
 
     private FileFrame getEndOfFileFrame(){
         switch (fileType){
-            default:return new FileFrame(fileType,filename,0L,new byte[0], folderName, folderSize);
-            case BACKUP_FILE: return new BackupFileFrame(fileType,filename, 0L,new byte[0], folderName, folderSize);
-            case SEGMENT: return new SegmentFrame(filename,new byte[0], folderName);
+            default:return new FileFrame(fileType,filename,0L, folderName, folderSize,new byte[0]);
+            case BACKUP_FILE: return new BackupFileFrame(fileType,filename, 0L, folderName, folderSize, new byte[0]);
+            case SEGMENT: return new SegmentFrame(filename, folderName, new byte[0]);
         }
     }
 }
