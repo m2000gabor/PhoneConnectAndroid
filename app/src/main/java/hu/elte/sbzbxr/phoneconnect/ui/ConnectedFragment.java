@@ -60,11 +60,6 @@ public class ConnectedFragment extends Fragment {
     private MainViewModel viewModel;
 
     @Override
-    public void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-    }
-
-    @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,Bundle savedInstanceState) {
         binding = FragmentConnectedBinding.inflate(inflater, container, false);
         return binding.getRoot();
@@ -80,37 +75,39 @@ public class ConnectedFragment extends Fragment {
         }
     }
 
+    private final ActionObserver actionObserver = new ActionObserver() {
+        @Override
+        public void arrived(NetworkAction networkAction) {
+            switch (networkAction.type){
+                case PING_ARRIVED:
+                    pingSuccessful(((Action_PingArrived) networkAction).getField());
+                    break;
+                case PIECE_OF_FILE_ARRIVED:
+                    arrivingFileTransfer.pieceOfFile(((Action_FilePieceArrived) networkAction).getField());
+                    break;
+                case LAST_PIECE_OF_FILE_ARRIVED:
+                    arrivingFileTransfer.endOfFile(((Action_LastPieceOfFileArrived) networkAction).getField());
+                    break;
+                case RESTORE_LIST_OF_AVAILABLE_BACKUPS:
+                    availableToRestore(((Action_RestoreListAvailable) networkAction).getField());
+                    break;
+                case PIECE_OF_FILE_SENT:
+                    sendingFileTransfer.pieceOfFile(((Action_FilePieceSent) networkAction).getField());
+                    break;
+                case LAST_PIECE_OF_FILE_SENT:
+                    sendingFileTransfer.endOfFile(((Action_LastPieceOfFileSent) networkAction).getField());
+                    break;
+            }
+        }
+    };
+
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         arrivingFileTransfer=new FileTransferUI(this,binding.includedFileArrivingPanel);
         sendingFileTransfer=new FileTransferUI(this,binding.includedFileSendingPanel);
 
         viewModel = new ViewModelProvider(requireActivity()).get(MainViewModel.class);
-        viewModel.getActions().register(new ActionObserver() {
-            @Override
-            public void arrived(NetworkAction networkAction) {
-                switch (networkAction.type){
-                    case PING_ARRIVED:
-                        pingSuccessful(((Action_PingArrived) networkAction).getField());
-                        break;
-                    case PIECE_OF_FILE_ARRIVED:
-                        arrivingFileTransfer.pieceOfFile(((Action_FilePieceArrived) networkAction).getField());
-                        break;
-                    case LAST_PIECE_OF_FILE_ARRIVED:
-                        arrivingFileTransfer.endOfFile(((Action_LastPieceOfFileArrived) networkAction).getField());
-                        break;
-                    case RESTORE_LIST_OF_AVAILABLE_BACKUPS:
-                        availableToRestore(((Action_RestoreListAvailable) networkAction).getField());
-                        break;
-                    case PIECE_OF_FILE_SENT:
-                        sendingFileTransfer.pieceOfFile(((Action_FilePieceSent) networkAction).getField());
-                        break;
-                    case LAST_PIECE_OF_FILE_SENT:
-                        sendingFileTransfer.endOfFile(((Action_LastPieceOfFileSent) networkAction).getField());
-                        break;
-                }
-            }
-        });
+        viewModel.getActions().register(actionObserver);
 
         viewModel.getUiData().observe(getViewLifecycleOwner(), new Observer<ConnectedFragmentUIData>() {
             @Override
@@ -122,8 +119,9 @@ public class ConnectedFragment extends Fragment {
 
     @Override
     public void onDestroyView() {
-        super.onDestroyView();
+        viewModel.getActions().unregister(actionObserver);
         binding = null;
+        super.onDestroyView();
     }
 
     @Override
@@ -238,7 +236,7 @@ public class ConnectedFragment extends Fragment {
     }
 
     public void pingSuccessful(String msg) {
-        Toast.makeText(getContext(),msg,Toast.LENGTH_SHORT).show();
+        Toast.makeText(requireContext(),msg,Toast.LENGTH_SHORT).show();
     }
 
 

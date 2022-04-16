@@ -23,5 +23,5 @@ public class ActionDelivery {
     public void register(ActionObserver observer){
         observers.add(observer);
     }
-
+    public void unregister(ActionObserver observer){observers.remove(observer);}
 }
