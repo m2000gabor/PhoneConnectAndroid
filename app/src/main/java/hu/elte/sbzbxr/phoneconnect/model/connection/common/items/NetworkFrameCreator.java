@@ -9,7 +9,7 @@ import java.util.Optional;
 
 /**
  * @implNote should be the same for both Windows and Android part
- * @version 1.0
+ * @version 1.1
  */
 public class NetworkFrameCreator {
 
@@ -60,7 +60,7 @@ public class NetworkFrameCreator {
         int readBytesCounter=0;
         while (readBytesCounter<dataLength){
             int res = in.read();
-            if(res<0){System.err.println("End of stream?");break;}
+            if(res<0){break;}
             byte b = (byte) res;
             byteBuffer.put(b);
             readBytesCounter++;

@@ -30,7 +30,7 @@ public class ScreenShotFrame extends NetworkFrame {
         if(isTransformed()) return;
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(screenShot.getBitmap().getAllocationByteCount());
         screenShot.getBitmap().compress(Bitmap.CompressFormat.JPEG,JPEG_QUALITY,byteArrayOutputStream);
-        segmentFrame = new SegmentFrame(screenShot.getName(),byteArrayOutputStream.toByteArray(),folderName);
+        segmentFrame = new SegmentFrame(screenShot.getName(), folderName, byteArrayOutputStream.toByteArray());
     }
 
     private boolean isTransformed(){return segmentFrame!=null;}

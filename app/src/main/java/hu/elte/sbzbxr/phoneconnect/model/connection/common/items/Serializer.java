@@ -3,7 +3,7 @@ package hu.elte.sbzbxr.phoneconnect.model.connection.common.items;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 
-//version 1.2
+//version 1.3
 public class Serializer {
     private final ByteArrayOutputStream outputStream;
 
@@ -36,6 +36,10 @@ public class Serializer {
         byte[] arr = ByteBuffer.allocate(8).putLong(i).array();
         for(byte b : arr) outputStream.write(b);
         return this;
+    }
+
+    public Serializer addField(boolean i) {
+        return addField(i?1:0);
     }
 
     public byte[] getAsBytes(){
