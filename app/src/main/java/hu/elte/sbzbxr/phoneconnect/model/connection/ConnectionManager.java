@@ -1,32 +1,33 @@
 package hu.elte.sbzbxr.phoneconnect.model.connection;
 
 import static hu.elte.sbzbxr.phoneconnect.ui.PickLocationActivity.FILENAME_TO_CREATE;
+import static hu.elte.sbzbxr.phoneconnect.ui.PickLocationActivity.FOLDERNAME_TO_CREATE;
 
-import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.Binder;
 import android.os.Handler;
-import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
 
-import androidx.annotation.Nullable;
-
-import java.io.FileNotFoundException;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.PrintStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicReference;
 
 import hu.elte.sbzbxr.phoneconnect.controller.MainViewModel;
+import hu.elte.sbzbxr.phoneconnect.model.actions.Action_FailedToConnect;
+import hu.elte.sbzbxr.phoneconnect.model.persistance.FileInFolderDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.persistance.MyFileDescriptor;
-import hu.elte.sbzbxr.phoneconnect.model.actions.Action_FailMessage;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_FilePieceArrived;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_LastPieceOfFileArrived;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_PingArrived;
@@ -35,7 +36,7 @@ import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.Action_NetworkStat
 import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.Action_NetworkStateDisconnected;
 import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_FilePieceSent;
 import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_LastPieceOfFileSent;
-import hu.elte.sbzbxr.phoneconnect.model.connection.buffer.OutgoingBuffer2;
+import hu.elte.sbzbxr.phoneconnect.model.connection.buffer.OutgoingBuffer;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.FileCutter;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.BackupFileFrame;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.FileFrame;
@@ -55,59 +56,39 @@ import hu.elte.sbzbxr.phoneconnect.ui.PickLocationActivity;
  * Manages the different types of outgoing and ingoing requests.
  * Establish and destroy the connection with the Windows side server app.
  */
-public class ConnectionManager extends Service {
+public class ConnectionManager {
     private static final String LOG_TAG = "ConnectionManager";
     private boolean isListening = false;
     private boolean isSending = false;
-    private AtomicReference<ConnectionLimiter> limiter = new AtomicReference<>(ConnectionLimiter.noLimit());
-    private Socket socket;
-    private PrintStream out;
+    private ConnectionLimiter limiter = ConnectionLimiter.noLimit();
+
+    private Socket tcpSocket;
+    private BufferedOutputStream tcpOutStream;
+
     private InputStream in;
-    private final OutgoingBuffer2 outgoingBuffer=new OutgoingBuffer2();
+    private final OutgoingBuffer outgoingBuffer=new OutgoingBuffer();
     private MainViewModel viewModel;
+    private final FileOutputStreamProvider streamProvider = new FileOutputStreamProvider(this);
+    private final Context context;
 
-    private final IBinder binder = new LocalBinder();
-
-    /**
-     * Class used for the client Binder. Because we know this service always
-     * runs in the same process as its clients, we don't need to deal with IPC.
-     */
-    public class LocalBinder extends Binder {
-        public ConnectionManager getService() {
-            // Return this instance of LocalService so clients can call public methods
-            return ConnectionManager.this;
-        }
+    public ConnectionManager(Context context) {
+        this.context=context;
     }
 
-    @Nullable
-    @Override
-    public IBinder onBind(Intent intent) {
-        return binder;
-    }
-
-    //Empty ctor is required for a Service.
-    public ConnectionManager() {}
-
-    public void setViewModel(MainViewModel mainViewModel){
-        this.viewModel=mainViewModel;
-    }
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
+    public void folderChosen(Intent intent, int flags, int startId) {
         try{
             Uri uri = intent.getParcelableExtra(PickLocationActivity.URI_OF_FILE);
-            String filename = intent.getStringExtra(FILENAME_TO_CREATE);
             if(uri !=null){
-                openOutputStream(filename,uri);
+                String filename = intent.getStringExtra(FILENAME_TO_CREATE);
+                String folderName = intent.getStringExtra(FOLDERNAME_TO_CREATE);
+                streamProvider.createStream(new FileInFolderDescriptor(filename,folderName),uri);
             }
         }catch (ClassCastException e){
             Log.d(LOG_TAG,"not a Uri");
         }
-        return super.onStartCommand(intent, flags, startId);
     }
 
-    //
     //From: https://gist.github.com/teocci/0187ac32dcdbd57d8aaa89342be90f89
-
     /**
      * Asynchronously establish a tcp connection with the given server
      */
@@ -117,7 +98,7 @@ public class ConnectionManager extends Service {
             return;
         }
         // Connect to the server
-        startAsyncTask(new ConnectionCreator(out,in,ip,port,this));
+        startAsyncTask(new ConnectionCreator(tcpOutStream,in,ip,port,this));
     }
 
     //From: https://www.simplifiedcoding.net/android-asynctask/
@@ -135,9 +116,10 @@ public class ConnectionManager extends Service {
             isListening =false;
             isSending =false;
             if(in!=null) in.close();
-            if(out!=null) out.close();
-            if(socket!=null) socket.close();
+            if(tcpOutStream !=null) tcpOutStream.close();
+            if(tcpSocket !=null) tcpSocket.close();
             viewModel.postAction(new Action_NetworkStateDisconnected());
+            outgoingBuffer.clear();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -151,13 +133,15 @@ public class ConnectionManager extends Service {
     /**
      * Invoked when a connection asynchronously established
      */
-    void connectRequestFinished(boolean successful,Socket s, String ip, int port, InputStream i, PrintStream o){
-        socket=s;
-        in=i;
-        out=o;
-        if(successful){
+    void connectRequestFinished(boolean successful, Socket s, String ip, int port, InputStream i, BufferedOutputStream o){
+        if(!successful){
+            viewModel.postAction(new Action_FailedToConnect(ip+":"+port));
+        }else{
+            tcpSocket =s;
+            in=i;
+            tcpOutStream =o;
             viewModel.postAction(new Action_NetworkStateConnected(ip,port));
-            if (out == null) {
+            if (tcpOutStream == null) {
                 System.err.println("But its null!!");
             }
             System.out.println("Successful connection establishment");
@@ -165,8 +149,30 @@ public class ConnectionManager extends Service {
             isSending=true;
             listen();
             startSendingThread();
-        }else{
-            viewModel.postAction(new Action_FailMessage("Could not establish the connection!"));
+
+            initUdp(ip);
+        }
+    }
+
+    private DatagramSocket udpSocket;
+    private InetAddress address;
+    private static final int UDP_SERVER_PORT = 4445;
+    private void initUdp(String ip) {
+        try {
+            udpSocket=new DatagramSocket();
+        } catch (SocketException e) {
+            e.printStackTrace();
+        }
+        address=new InetSocketAddress(ip,UDP_SERVER_PORT).getAddress();
+    }
+
+
+    private void sendWithUdp(NetworkFrame frame) {
+        try {
+            UdpSender.send(limiter,udpSocket,address,UDP_SERVER_PORT,frame);
+        } catch (IOException e) {
+            e.printStackTrace();
+            Log.e(LOG_TAG, "Failed to send segment");
         }
     }
 
@@ -200,22 +206,18 @@ public class ConnectionManager extends Service {
         }).start();
     }
 
-    private final FileOutputStreamProvider streamProvider = new FileOutputStreamProvider();
     private void fileArrived(FileFrame fileFrame) {
-        String name = fileFrame.filename;
-        if(name==null) {
+        if(fileFrame.filename==null) {
             Log.e(LOG_TAG,"This frame doesn't have a name");
             return;
         }
-
-        OutputStream os = streamProvider.getOutputStream(this, name);
+        final FileInFolderDescriptor desc = new FileInFolderDescriptor(fileFrame.filename,fileFrame.folderName);
         if(fileFrame.getDataLength()==0){
-            final String tmp = fileFrame.filename;
-            Log.d(LOG_TAG,"File arrived: "+tmp);
+            Log.d(LOG_TAG,"File arrived: "+desc.toString());
             viewModel.postAction(new Action_LastPieceOfFileArrived(fileFrame));
-            //view.getConnectedFragment().ifPresent(f->f.getArrivingFileTransfer().incomingFileTransferStopped(fileFrame, true));
-            streamProvider.endOfFileStreaming(name);
+            streamProvider.endOfFileStreaming(desc);
         }else{
+            OutputStream os = streamProvider.getOutputStream(desc);
             saveFrame(os,fileFrame);
             viewModel.postAction(new Action_FilePieceArrived(fileFrame));
         }
@@ -228,26 +230,6 @@ public class ConnectionManager extends Service {
             e.printStackTrace();
         }
     }
-
-    public void askForSaveLocation(String filename){
-        Intent intent = new Intent();
-        intent.setClass(getApplicationContext(), PickLocationActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        intent.putExtra(FILENAME_TO_CREATE,filename);
-        startActivity(intent);
-    }
-
-    private void openOutputStream(String filename, Uri uri){
-        try {
-            OutputStream fileSavingOutputStream = getContentResolver().openOutputStream(uri,"w");
-            streamProvider.onStreamCreated(filename,fileSavingOutputStream);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-            Log.e("PickLocationActivity","No access to this location; cannot save the file");
-        }
-    }
-
-
 
     void messageArrived(InputStream in) throws IOException{
         MessageFrame messageFrame = MessageFrame.deserialize(in);
@@ -262,16 +244,12 @@ public class ConnectionManager extends Service {
     private void restoreFolderListArrived(RestorePostMessageFrame messageFrame){
         viewModel.postAction(new Action_RestoreListAvailable(messageFrame.getBackups()));
         System.out.println("Available restores arrived! ");
-        /*
-        view.runOnUiThread(() -> {
-            view.availableToRestore(messageFrame.getBackups());
-        });*/
     }
 
     private void pingArrived(PingMessageFrame messageFrame){
-        viewModel.postAction(new Action_PingArrived(messageFrame.message));
-        //view.successfulPing(messageFrame.message);
-        System.out.println("Successful ping! \nReceived message: "+ messageFrame.message);
+        messageFrame.answerArrived();
+        viewModel.postAction(new Action_PingArrived("Round-trip latency: "+messageFrame.calculateLatency()+"ms"));
+        System.out.println("Successful ping! \nReceived: "+ messageFrame.toString());
     }
 
     private void startSendingThread(){
@@ -279,12 +257,16 @@ public class ConnectionManager extends Service {
             while(isSending){
                 NetworkFrame sendable = outgoingBuffer.take();
                 if(sendable!=null){
-                    FrameSender.send(limiter.get(),out,sendable);
+                    if(sendable.type==FrameType.SEGMENT){
+                        sendWithUdp(sendable);
+                    }else{
+                        FrameSender.send(limiter, tcpOutStream,sendable);
+                    }
                 }else{
                     Log.d(LOG_TAG,"Got null from buffer");
                 }
             }
-            limiter.get().stop();
+            limiter.stop();
         }).start();
     }
 
@@ -308,7 +290,7 @@ public class ConnectionManager extends Service {
         fileCutterExecutorService.submit(()->{
             for(MyFileDescriptor myFileDescriptor : files){
                 Log.d(LOG_TAG,"Would send the following file: "+ myFileDescriptor.filename);
-                FileCutter cutter = FileCutterCreator.create(myFileDescriptor,getContentResolver(),fileType, backupId,folderSize);
+                FileCutter cutter = FileCutterCreator.create(myFileDescriptor,getContext().getContentResolver(),fileType, backupId,folderSize);
 
                 //sending
                 while (!cutter.isEnd()){
@@ -333,12 +315,25 @@ public class ConnectionManager extends Service {
         compressToJPGExecutorService.submit(screenShotFrame::transform);
     }
 
-    public Socket getSocket() {
-        return socket;
+    public Socket getTcpSocket() {
+        return tcpSocket;
     }
 
     public void setLimiter(ConnectionLimiter l) {
-        limiter.getAndSet(l).stop();
-        limiter.get().start();
+        limiter.stop();
+        limiter = l;
+        limiter.start();
+    }
+
+    public void setViewModel(MainViewModel viewModel) {
+        this.viewModel = viewModel;
+    }
+
+    public MainViewModel getViewModel() {
+        return viewModel;
+    }
+
+    public Context getContext() {
+        return context;
     }
 }

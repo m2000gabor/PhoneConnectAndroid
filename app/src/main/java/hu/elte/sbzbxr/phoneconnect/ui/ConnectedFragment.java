@@ -34,6 +34,7 @@ import java.util.List;
 
 import hu.elte.sbzbxr.phoneconnect.controller.MainViewModel;
 import hu.elte.sbzbxr.phoneconnect.databinding.FragmentConnectedBinding;
+import hu.elte.sbzbxr.phoneconnect.model.ActionObserver;
 import hu.elte.sbzbxr.phoneconnect.model.persistance.MyFileDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.persistance.MyPreferenceManager;
 import hu.elte.sbzbxr.phoneconnect.model.persistance.MyUriQuery;
@@ -52,7 +53,6 @@ public class ConnectedFragment extends Fragment {
     private static final String TAG = ToConnectFragment.class.getName();
     private static final int REQUEST_MEDIA_PROJECTION = 1;
     private static final int REQUEST_FILE_PICKER = 2;
-    private static final int REQUEST_BACKUP_DIR = 3;
     private FragmentConnectedBinding binding;
     private MainActivityCallback activityCallback;
     private FileTransferUI arrivingFileTransfer;
@@ -70,56 +70,58 @@ public class ConnectedFragment extends Fragment {
         super.onAttach(context);
         try {
             activityCallback = (MainActivityCallback) context;
+            viewModel = new ViewModelProvider(requireActivity()).get(MainViewModel.class);
+            viewModel.refreshData(activityCallback.getServiceController());
         } catch (ClassCastException castException) {
             Log.e(TAG, castException.getMessage());
         }
     }
 
+    private final ActionObserver actionObserver = new ActionObserver() {
+        @Override
+        public void arrived(NetworkAction networkAction) {
+            switch (networkAction.type){
+                case PING_ARRIVED:
+                    pingSuccessful(((Action_PingArrived) networkAction).getField());
+                    break;
+                case PIECE_OF_FILE_ARRIVED:
+                    arrivingFileTransfer.pieceOfFile(((Action_FilePieceArrived) networkAction).getField());
+                    break;
+                case LAST_PIECE_OF_FILE_ARRIVED:
+                    arrivingFileTransfer.endOfFile(((Action_LastPieceOfFileArrived) networkAction).getField());
+                    break;
+                case RESTORE_LIST_OF_AVAILABLE_BACKUPS:
+                    availableToRestore(((Action_RestoreListAvailable) networkAction).getField());
+                    break;
+                case PIECE_OF_FILE_SENT:
+                    sendingFileTransfer.pieceOfFile(((Action_FilePieceSent) networkAction).getField());
+                    break;
+                case LAST_PIECE_OF_FILE_SENT:
+                    sendingFileTransfer.endOfFile(((Action_LastPieceOfFileSent) networkAction).getField());
+                    break;
+            }
+        }
+    };
+
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        Bundle bundle = getArguments();
-        if(bundle!=null){
-            String ip = bundle.getString(MainActivity.IP_ADDRESS);
-            String port = bundle.getString(MainActivity.PORT);
-            showConnectedUI(ip,port);
-        }else{
-            showConnectedUI(null,null);
-        }
         arrivingFileTransfer=new FileTransferUI(this,binding.includedFileArrivingPanel);
         sendingFileTransfer=new FileTransferUI(this,binding.includedFileSendingPanel);
 
-        viewModel = new ViewModelProvider(requireActivity()).get(MainViewModel.class);
-        viewModel.getActions().observe(getViewLifecycleOwner(), new Observer<NetworkAction>() {
+        viewModel.getActions().register(actionObserver);
+        viewModel.getUiData().observe(getViewLifecycleOwner(), new Observer<ConnectedFragmentUIData>() {
             @Override
-            public void onChanged(NetworkAction networkAction) {
-                switch (networkAction.type){
-                    case PING_ARRIVED:
-                        pingSuccessful(((Action_PingArrived) networkAction).getField());
-                        break;
-                    case PIECE_OF_FILE_ARRIVED:
-                        arrivingFileTransfer.pieceOfFile(((Action_FilePieceArrived) networkAction).getField());
-                        break;
-                    case LAST_PIECE_OF_FILE_ARRIVED:
-                        arrivingFileTransfer.endOfFile(((Action_LastPieceOfFileArrived) networkAction).getField());
-                        break;
-                    case RESTORE_LIST_OF_AVAILABLE_BACKUPS:
-                        availableToRestore(((Action_RestoreListAvailable) networkAction).getField());
-                        break;
-                    case PIECE_OF_FILE_SENT:
-                        sendingFileTransfer.pieceOfFile(((Action_FilePieceSent) networkAction).getField());
-                        break;
-                    case LAST_PIECE_OF_FILE_SENT:
-                        sendingFileTransfer.endOfFile(((Action_LastPieceOfFileSent) networkAction).getField());
-                        break;
-                }
+            public void onChanged(ConnectedFragmentUIData connectedFragmentUIData) {
+                showConnectedUI(connectedFragmentUIData);
             }
         });
     }
 
     @Override
     public void onDestroyView() {
-        super.onDestroyView();
+        viewModel.getActions().unregister(actionObserver);
         binding = null;
+        super.onDestroyView();
     }
 
     @Override
@@ -148,11 +150,10 @@ public class ConnectedFragment extends Fragment {
     }
 
 
-    public void showConnectedUI(@Nullable String ip, @Nullable String port){
-        if(ip != null && port !=null){
-            binding.connectedToLabel.setText(String.format("Connected to: %s:%s", ip, port));
+    public void showConnectedUI(ConnectedFragmentUIData data){
+        if(data.getIp()!=null && data.getPort()!=null){
+            binding.connectedToLabel.setText(String.format("Connected to: %s:%s", data.getIp(),data.getPort()));
         }
-
         //setup buttons
         binding.sendFilesButton.setOnClickListener(v -> showFilePickerDialog());
         binding.pingButton.setOnClickListener(v -> activityCallback.getServiceController().sendPing());
@@ -161,13 +162,15 @@ public class ConnectedFragment extends Fragment {
         binding.disconnectButton.setOnClickListener(v -> activityCallback.getServiceController().disconnectFromServer());
 
         //Setup processes
+        binding.includedScreenSharePanel.screenShareSwitch.setChecked(data.isStreaming());
         binding.includedScreenSharePanel.screenShareSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if(isChecked){
-                startStreamingClicked();
+                startStreamingClicked(binding.includedScreenSharePanel.demoSourceCheckBox.isChecked());
             }else{
                 stopScreenCaptureAndRecord();
             }
         });
+        binding.includedScreenSharePanel.slowerNetworkCheckBox.setChecked(data.isLimited());
         binding.includedScreenSharePanel.slowerNetworkCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -177,9 +180,10 @@ public class ConnectedFragment extends Fragment {
                 }else{
                     limiter=ConnectionLimiter.noLimit();
                 }
-                viewModel.getServiceController().setNetworkLimit(limiter);
+                activityCallback.getServiceController().setNetworkLimit(limiter);
             }
         });
+        binding.includedScreenSharePanel.demoSourceCheckBox.setChecked(data.isDemo());
         binding.includedScreenSharePanel.demoSourceCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -195,6 +199,7 @@ public class ConnectedFragment extends Fragment {
             }
         });
 
+        binding.includedNotificationPanel.notificationSwitch.setChecked(data.isNotificationForwarded());
         binding.includedNotificationPanel.notificationSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if(isChecked){
                 startNotificationService();
@@ -231,7 +236,7 @@ public class ConnectedFragment extends Fragment {
     }
 
     public void pingSuccessful(String msg) {
-        Toast.makeText(getContext(),msg,Toast.LENGTH_SHORT).show();
+        Toast.makeText(requireContext(),msg,Toast.LENGTH_SHORT).show();
     }
 
 
@@ -252,8 +257,13 @@ public class ConnectedFragment extends Fragment {
 
 
     //For screenRecording
-    private void startStreamingClicked(){
-        requestScreenCapturePermission();
+    private void startStreamingClicked(boolean checked){
+        if(checked){
+            startDemoCaptureAndRecord();
+        }else{
+            requestScreenCapturePermission();
+        }
+
     }
 
     private void requestScreenCapturePermission(){
@@ -263,6 +273,9 @@ public class ConnectedFragment extends Fragment {
 
     private void startScreenCaptureAndRecord(int resultCode, Intent data){
         activityCallback.startScreenCapture(resultCode,data);
+    }
+    private void startDemoCaptureAndRecord(){
+        activityCallback.startDemoCapture();
     }
 
     private void stopScreenCaptureAndRecord(){
@@ -284,43 +297,6 @@ public class ConnectedFragment extends Fragment {
     }
 
     private void onRestoreMediaClicked(){ activityCallback.getServiceController().askRestoreList(); }
-
-
-/*
-    private void backupData(){
-        ContentResolver contentResolver = requireActivity().getApplicationContext().getContentResolver();
-        String backupID = DateFormat.getDateTimeInstance().format(Calendar.getInstance().getTime())
-                .replace(':','_').replace(' ','_');
-
-        new Thread(() ->{
-                List<MyFileDescriptor> files = new ArrayList<>(MyUriQuery.queryDirectory(contentResolver,
-                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI, MediaStore.Images.Media._ID)).
-                        stream().
-                        limit(2).
-                        collect(Collectors.toList());
-                long totalSize=files.stream().map(d->d.size).reduce(0L, Long::sum);
-                files.forEach(myFileDescriptor -> activityCallback.getServiceController().sendBackupFile(myFileDescriptor,backupID,totalSize));
-        }).start();
-    }
-
-
-    private final ActivityResultLauncher<String> requestPermissionLauncher =
-            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-                if (isGranted) {
-                    mediaBackupAccessGranted();
-                } else {
-                    System.err.println("User declined");
-                }
-            });
-    private void requestAccess(){
-        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-            mediaBackupAccessGranted();
-        }  else {
-            // You can directly ask for the permission.
-            // The registered ActivityResultCallback gets the result of this request.
-            requestPermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE);
-        }
-    }*/
 
     private final ActivityResultLauncher<Intent> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), new ActivityResultCallback<androidx.activity.result.ActivityResult>() {
@@ -378,23 +354,11 @@ public class ConnectedFragment extends Fragment {
     private void availableToRestore(ArrayList<AbstractMap.SimpleImmutableEntry<String, Long>> backupList) {
         if(backupList.isEmpty()){
             Toast.makeText(getContext(),"There's no available backup to restore",Toast.LENGTH_SHORT).show();
-        }else{
-            showConfirmationDialog(
-                    ()->{
-                        AbstractMap.SimpleImmutableEntry<String, Long> chosenBackup = backupList.get(backupList.size()-1);
-                        activityCallback.getServiceController().requestRestore(chosenBackup.getKey());
-                    },
-                    ()-> System.err.println("User cancelled"),
-                    "This process may take hours to complete, and restore all of your images from your backup to this phone.");
+        }else {
+            ListDialog newFragment = new ListDialog(backupList);
+            newFragment.show(getChildFragmentManager(), "backupListChooser");
         }
-        //todo finish this
-        /*
-        1. User click on the restore button -> send request, show dialog wth loading screen
-        2. Received list of backups -> populate dialog (This function should do this)
-        3. User selects the backup to restore -> ask the windows side to do it
-         */
     }
-
 
     //etc
     private void showConfirmationDialog(Runnable confirm, Runnable cancel,String message){
@@ -410,14 +374,6 @@ public class ConnectedFragment extends Fragment {
         // Create the AlertDialog
         AlertDialog dialog = builder.create();
         dialog.show();
-    }
-
-    public FileTransferUI getArrivingFileTransfer() {
-        return arrivingFileTransfer;
-    }
-
-    public FileTransferUI getSendingFileTransfer() {
-        return sendingFileTransfer;
     }
 
     public MainViewModel getViewModel() {

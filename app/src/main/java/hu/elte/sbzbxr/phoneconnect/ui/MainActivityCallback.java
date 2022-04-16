@@ -11,4 +11,8 @@ public interface MainActivityCallback {
     void stopNotificationListening();
 
     void startScreenCapture(int resultCode, Intent data);
+
+    void startDemoCapture();
+
+    boolean connectToServer(String ip, int port);
 }

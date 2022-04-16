@@ -1,16 +1,17 @@
 package hu.elte.sbzbxr.phoneconnect.model.connection;
 
+import android.util.Log;
+
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class ConnectionLimiter {
     private final Timer timer;
     private final AtomicLong bytesSentInThisSecond;
     private final AtomicLong maxBytesPerSecond;
-    private final AtomicBoolean monitor = new AtomicBoolean(true);
+    private final AtomicBoolean monitor = new AtomicBoolean();
 
     private ConnectionLimiter(long maxBytesPerSecond) {
         timer = new Timer();
@@ -54,6 +55,7 @@ public class ConnectionLimiter {
         try{
             long i = bytesSentInThisSecond.incrementAndGet();
             while (i>=maxBytesPerSecond.get() && maxBytesPerSecond.get()>0){
+                Log.d("ConnectionLimiter","Need to wait");
                 synchronized (monitor) {
                     monitor.wait();
                 }

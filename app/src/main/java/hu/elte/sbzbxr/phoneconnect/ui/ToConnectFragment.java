@@ -98,7 +98,7 @@ public class ToConnectFragment extends Fragment {
                 Toast.makeText(getContext(), "Entered port is not a number", Toast.LENGTH_SHORT).show();
                 System.err.println("Entered port is not a number");
             }
-            if(!activityCallback.getServiceController().connectToServer(ip,port)){
+            if(!activityCallback.connectToServer(ip,port)){
                 Toast.makeText(getContext(), "Invalid ip or port", Toast.LENGTH_SHORT).show();
                 System.err.println("Invalid ip or port");
             }

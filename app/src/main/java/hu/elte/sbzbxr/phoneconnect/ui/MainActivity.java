@@ -1,8 +1,12 @@
 package hu.elte.sbzbxr.phoneconnect.ui;
 
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -16,19 +20,19 @@ import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.ViewModelProvider;
 
 import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.Optional;
 
 import hu.elte.sbzbxr.phoneconnect.R;
 import hu.elte.sbzbxr.phoneconnect.controller.MainViewModel;
 import hu.elte.sbzbxr.phoneconnect.controller.ServiceController;
 import hu.elte.sbzbxr.phoneconnect.databinding.ActivityMainBinding;
+import hu.elte.sbzbxr.phoneconnect.model.ActionObserver;
 import hu.elte.sbzbxr.phoneconnect.model.actions.Action_FailMessage;
+import hu.elte.sbzbxr.phoneconnect.model.actions.NetworkAction;
 import hu.elte.sbzbxr.phoneconnect.model.actions.helper.ActionType;
 import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.Action_NetworkStateConnected;
-import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.Action_NetworkStateDisconnected;
 
-public class MainActivity extends AppCompatActivity implements MainActivityCallback {
+public class MainActivity extends AppCompatActivity implements MainActivityCallback, ListDialog.NoticeListDialogListener {
+    public static final boolean LOG_SEGMENTS=false;
     public static final String IP_ADDRESS = "ipAddress";
     public static final String PORT = "port";
     private static final String TAG = MainActivity.class.getName();
@@ -38,6 +42,7 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
     private final static int FRAGMENT_CONTAINER_ID = R.id.main_fragment_container;
     public static final String CONNECTED_FRAGMENT_TAG="ConnectedFragment";
     public static final String TO_CONNECT_FRAGMENT_TAG="ToConnectFragment";
+    public static final String LOADING_FRAGMENT_TAG="LoadingFragment";
 
     private MainViewModel viewModel;
 
@@ -55,10 +60,13 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
         myToolbar.setTitle("Phone Connect");
         myToolbar.setTitleTextColor(Color.WHITE);
 
+        startForegroundService(new Intent(this,ServiceController.class));
+
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
-        viewModel.getActions().observe(this, action -> {
-            // update UI
-            switch(action.type){
+        viewModel.getActions().register(new ActionObserver() {
+            @Override
+            public void arrived(NetworkAction action) {
+                switch (action.type){
                 case JUST_CONNECTED:
                     Log.e(TAG,"Shouldnt be called, use LiveData<NetworkStateAction>> instead form serviceController.getConnectionData()!");
                     Action_NetworkStateConnected actionNetworkStateConnected = (Action_NetworkStateConnected) action;
@@ -71,6 +79,11 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
                 case FAIL_MESSAGE:
                     showFailMessage(((Action_FailMessage) action).getField());
                     break;
+                case FAILED_CONNECT:
+                    afterDisconnect();
+                    Toast.makeText(MainActivity.this,"Cannot connect",Toast.LENGTH_SHORT).show();
+                    break;
+            }
             }
         });
 
@@ -80,7 +93,6 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
                 System.err.println("connected to:"+a.getIp()+":"+a.getPort());
                 connectedTo(a.getIp(),a.getPort());
             }else if(networkStateAction.getType()== ActionType.JUST_DISCONNECTED){
-                //Action_NetworkStateDisconnected a = (Action_NetworkStateDisconnected) networkStateAction;
                 afterDisconnect();
             }else{
                 throw new IllegalArgumentException("unknown networkStateAction type");
@@ -130,6 +142,10 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
 
     private void afterDisconnect(){
         try {
+            if(getServiceController()!=null){
+                getServiceController().stopNotificationListening(this);
+                getServiceController().stopScreenCapture();
+            }
             FragmentManager fragmentManager = getSupportFragmentManager();
             fragmentManager.beginTransaction()
                     .replace(FRAGMENT_CONTAINER_ID, ToConnectFragment.class, null, TO_CONNECT_FRAGMENT_TAG)
@@ -141,21 +157,44 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
         }
     }
 
-
     @Override
     protected void onStart() {
         super.onStart();
-        viewModel.bindConnectionManager(this);
+        Intent intent = new Intent(this, ServiceController.class);
+        bindService(intent, connection, Context.BIND_IMPORTANT);
     }
 
     @Override
     protected void onStop() {
-        viewModel.unbindConnectionManager(this);
+        unbindService(connection);
+        mBound = false;
         super.onStop();
     }
 
+    @Nullable private ServiceController serviceController;
+    private boolean mBound = false;
+    private final ServiceConnection connection = new ServiceConnection() {
+
+        @Override
+        public void onServiceConnected(ComponentName className,
+                                       IBinder service) {
+            // We've bound to LocalService, cast the IBinder and get LocalService instance
+            ServiceController.LocalBinder binder = (ServiceController.LocalBinder) service;
+            serviceController = binder.getService();
+            serviceController.refreshData(viewModel);
+            mBound = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName arg0) {
+            mBound = false;
+            serviceController = null;
+        }
+    };
+
+    @Override @Nullable
     public ServiceController getServiceController() {
-        return viewModel.getServiceController();
+        return serviceController;
     }
 
     @Override
@@ -163,22 +202,61 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
         super.onActivityResult(requestCode, resultCode, data);
     }
 
-    public Optional<ConnectedFragment> getConnectedFragment(){
-        return Optional.ofNullable((ConnectedFragment) getSupportFragmentManager().findFragmentByTag(CONNECTED_FRAGMENT_TAG));
-    }
-
     @Override
     public void startNotificationListening() {
-        viewModel.getServiceController().startNotificationListening(this);
+        if (getServiceController() != null) {
+            getServiceController().startNotificationListening(this);
+        }
     }
 
     @Override
     public void stopNotificationListening() {
-        viewModel.getServiceController().stopNotificationListening(this);
+        if (getServiceController() != null) {
+            getServiceController().stopNotificationListening(this);
+        }
     }
 
     @Override
     public void startScreenCapture(int resultCode, Intent data) {
-        viewModel.getServiceController().startScreenCapture(resultCode,data,this);
+        if (getServiceController() != null) {
+            getServiceController().startRealScreenCapture(resultCode,data,this);
+        }
+    }
+
+    @Override
+    public void startDemoCapture() {
+        if (getServiceController() != null) {
+            getServiceController().startDemoScreenCapture(this);
+        }
+    }
+
+    @Override
+    public boolean connectToServer(String ip, int port) {
+        boolean r = getServiceController().connectToServer(ip, port);
+        LoadingDialog loadingDialog = new LoadingDialog("Connecting...");
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        fragmentManager.beginTransaction()
+                .replace(FRAGMENT_CONTAINER_ID, loadingDialog, LOADING_FRAGMENT_TAG)
+                .setReorderingAllowed(true)
+                .commit();
+        return r;
+    }
+
+    @Override
+    public void onListItemSelected(AbstractMap.SimpleImmutableEntry<String, Long> selectedEntry, String selectedLabel) {
+        if (getServiceController() != null) {
+            getServiceController().requestRestore(selectedEntry.getKey());
+        }
+    }
+
+    @Override
+    public void onRestoreCancelled() {
+        System.err.println("User cancelled");
+    }
+
+    @Override
+    protected void onDestroy() {
+        stopService(new Intent(this,ServiceController.class));
+        super.onDestroy();
     }
 }
