@@ -132,8 +132,10 @@ public class ServiceController extends Service {
     }
 
     public void disconnectFromServer() {
-        screenCaptureManager.stop();
-        connectionManager.disconnect();
+        new Thread(()->{
+            screenCaptureManager.stop();
+            connectionManager.disconnect();
+        }).start();
     }
 
     public void startNotificationListening(MainActivity mainActivity) {

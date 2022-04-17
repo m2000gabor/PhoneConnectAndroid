@@ -30,8 +30,9 @@ import hu.elte.sbzbxr.phoneconnect.model.actions.Action_FailMessage;
 import hu.elte.sbzbxr.phoneconnect.model.actions.NetworkAction;
 import hu.elte.sbzbxr.phoneconnect.model.actions.helper.ActionType;
 import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.Action_NetworkStateConnected;
+import hu.elte.sbzbxr.phoneconnect.ui.progress.FileTransferQueueDialog;
 
-public class MainActivity extends AppCompatActivity implements MainActivityCallback, ListDialog.NoticeListDialogListener {
+public class MainActivity extends AppCompatActivity implements MainActivityCallback, RestoreListDialog.NoticeListDialogListener, FileTransferQueueDialog.FileTransferDialogListener {
     public static final boolean LOG_SEGMENTS=false;
     public static final String IP_ADDRESS = "ipAddress";
     public static final String PORT = "port";
@@ -258,5 +259,18 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
     protected void onDestroy() {
         stopService(new Intent(this,ServiceController.class));
         super.onDestroy();
+    }
+
+    @Override
+    public void stopAllOutgoingTransfer() {
+        if (getServiceController() != null) {
+            getServiceController().getConnectionManager().clearOutgoingFileQueue();
+        }
+        Toast.makeText(this,"All outgoing transfers are stopped.",Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void stopAllIncomingTransfer() {
+        Toast.makeText(this,"This feature has not been implemented yet.",Toast.LENGTH_SHORT).show();
     }
 }

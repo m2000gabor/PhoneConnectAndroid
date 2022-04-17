@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class ListDialog extends DialogFragment {
+public class RestoreListDialog extends DialogFragment {
     public interface NoticeListDialogListener {
         public void onListItemSelected(AbstractMap.SimpleImmutableEntry<String, Long> selectedEntry, String selectedLabel);
         public void onRestoreCancelled();
@@ -24,7 +24,7 @@ public class ListDialog extends DialogFragment {
     private final List<String> items;
     private NoticeListDialogListener listener;
 
-    public ListDialog(ArrayList<AbstractMap.SimpleImmutableEntry<String, Long>> backupList) {
+    public RestoreListDialog(ArrayList<AbstractMap.SimpleImmutableEntry<String, Long>> backupList) {
         this.entries = backupList;
         this.items = backupList.stream().map(entry->entry.getKey()+" ("+entry.getValue()+" bytes)").collect(Collectors.toList());
     }

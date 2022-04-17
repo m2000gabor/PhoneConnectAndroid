@@ -14,7 +14,6 @@ import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -23,6 +22,7 @@ import java.net.SocketException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import hu.elte.sbzbxr.phoneconnect.controller.MainViewModel;
 import hu.elte.sbzbxr.phoneconnect.model.actions.Action_FailedToConnect;
@@ -116,12 +116,15 @@ public class ConnectionManager {
             isListening =false;
             isSending =false;
             if(in!=null) in.close();
-            if(tcpOutStream !=null) tcpOutStream.close();
-            if(tcpSocket !=null) tcpSocket.close();
+            try{
+                if(tcpOutStream !=null) {tcpOutStream.close();}
+            }catch (SocketException ignore){}
+            if(tcpSocket !=null) {tcpSocket.close();}
             viewModel.postAction(new Action_NetworkStateDisconnected());
             outgoingBuffer.clear();
         } catch (IOException e) {
             e.printStackTrace();
+            viewModel.postAction(new Action_NetworkStateDisconnected());
         }
     }
 
@@ -286,14 +289,24 @@ public class ConnectionManager {
 
 
     private final ExecutorService fileCutterExecutorService = Executors.newSingleThreadExecutor();
+    private final AtomicBoolean stopFileSendingFlag = new AtomicBoolean(false);
     public void sendFiles(List<MyFileDescriptor> files, FrameType fileType, String backupId, long folderSize){
+
+        files.forEach(desc->{
+            viewModel.postAction(new Action_FilePieceSent(new FileFrame(
+                    fileType,desc.filename,desc.size,backupId,folderSize,new byte[0]
+            )));
+        });
+
         fileCutterExecutorService.submit(()->{
             for(MyFileDescriptor myFileDescriptor : files){
                 Log.d(LOG_TAG,"Would send the following file: "+ myFileDescriptor.filename);
                 FileCutter cutter = FileCutterCreator.create(myFileDescriptor,getContext().getContentResolver(),fileType, backupId,folderSize);
 
+                if(stopFileSendingFlag.get()) viewModel.postAction(new Action_LastPieceOfFileSent(cutter.current()));
+
                 //sending
-                while (!cutter.isEnd()){
+                while (!cutter.isEnd() && !stopFileSendingFlag.get()){
                     outgoingBuffer.forceInsert(cutter.current());
 
                     //notify ui that a piece of file sent
@@ -301,12 +314,15 @@ public class ConnectionManager {
 
                     cutter.next();
                 }
-
                 //notify ui that file sending completed
                 viewModel.postAction(new Action_LastPieceOfFileSent(cutter.current()));
             }
+            outgoingBuffer.removeOutgoingFileFrames();
+            stopFileSendingFlag.set(false);
         });
     }
+
+    public void clearOutgoingFileQueue(){stopFileSendingFlag.set(true);}
 
     private final ExecutorService compressToJPGExecutorService = Executors.newFixedThreadPool(4);
     public void sendScreenShot(ScreenShot screenShot) {

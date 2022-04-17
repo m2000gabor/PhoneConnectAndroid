@@ -1,5 +1,7 @@
 package hu.elte.sbzbxr.phoneconnect.model.connection.buffer;
 
+import androidx.annotation.NonNull;
+
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,6 +16,10 @@ public class OutgoingBuffer {
 
     public void clear() {
         map.forEach((prio,queue)->queue.clear());
+    }
+
+    public void removeOutgoingFileFrames() {
+        map.remove(getPriority(FrameType.FILE));
     }
 
     private enum BufferPriority{
@@ -47,7 +53,9 @@ public class OutgoingBuffer {
         NetworkFrame ret=null;
         while (ret==null){
             for(BufferPriority p : BufferPriority.values()){
-                ret = map.get(p).poll();
+                BlockingQueue<NetworkFrame> queue = map.get(p);
+                if(queue==null) continue;
+                ret = queue.poll();
                 if(ret !=null) break;
             }
         }
@@ -57,14 +65,7 @@ public class OutgoingBuffer {
 
 
     public void forceInsert(NetworkFrame frame){
-        BufferPriority priority;
-        switch (frame.type){
-            default:priority=BufferPriority.DEFAULT;break;
-            case INTERNAL_MESSAGE:priority=BufferPriority.INSTANT;break;
-            case NOTIFICATION: priority=BufferPriority.IMPORTANT;break;
-            case SEGMENT:priority=BufferPriority.SEGMENT; break;
-            case FILE: priority=BufferPriority.FILE;break;
-        }
+        BufferPriority priority = getPriority(frame.type);
         if(frame.type== FrameType.SEGMENT){((ScreenShotFrame)frame).getScreenShot().addTimestamp("beforeInsert",System.currentTimeMillis());}
         try {
             if(priority==BufferPriority.SEGMENT){
@@ -78,6 +79,19 @@ public class OutgoingBuffer {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    @NonNull
+    private BufferPriority getPriority(FrameType type) {
+        BufferPriority priority;
+        switch (type){
+            default:priority=BufferPriority.DEFAULT;break;
+            case INTERNAL_MESSAGE:priority=BufferPriority.INSTANT;break;
+            case NOTIFICATION: priority=BufferPriority.IMPORTANT;break;
+            case SEGMENT:priority=BufferPriority.SEGMENT; break;
+            case FILE: priority=BufferPriority.FILE;break;
+        }
+        return priority;
     }
 
     private static int getMaxSize(BufferPriority type){

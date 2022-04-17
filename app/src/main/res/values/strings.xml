@@ -10,4 +10,6 @@
     <string name="default_port">5000</string>
     <string name="notification">notification</string>
 
+    <string name="showAll"><a><u>Show all</u></a></string>
+
 </resources>

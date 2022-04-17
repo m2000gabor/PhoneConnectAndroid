@@ -21,7 +21,6 @@ import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.documentfile.provider.DocumentFile;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
@@ -47,6 +46,7 @@ import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_FilePieceSent;
 import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_LastPieceOfFileSent;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionLimiter;
 import hu.elte.sbzbxr.phoneconnect.ui.notifications.NotificationSettings;
+import hu.elte.sbzbxr.phoneconnect.ui.progress.FileTransferQueueDialog;
 import hu.elte.sbzbxr.phoneconnect.ui.progress.FileTransferUI;
 
 public class ConnectedFragment extends Fragment {
@@ -55,8 +55,8 @@ public class ConnectedFragment extends Fragment {
     private static final int REQUEST_FILE_PICKER = 2;
     private FragmentConnectedBinding binding;
     private MainActivityCallback activityCallback;
-    private FileTransferUI arrivingFileTransfer;
-    private FileTransferUI sendingFileTransfer;
+    private FileTransferUI incomingFileTransferUi;
+    private FileTransferUI outgoingFileTransferUi;
     private MainViewModel viewModel;
 
     @Override
@@ -85,19 +85,23 @@ public class ConnectedFragment extends Fragment {
                     pingSuccessful(((Action_PingArrived) networkAction).getField());
                     break;
                 case PIECE_OF_FILE_ARRIVED:
-                    arrivingFileTransfer.pieceOfFile(((Action_FilePieceArrived) networkAction).getField());
+                    viewModel.getIncomingFileTransferSummary().pieceOfFile(((Action_FilePieceArrived) networkAction).getField());
+                    incomingFileTransferUi.refresh(viewModel.getIncomingFileTransferSummary().getActiveTransfers());
                     break;
                 case LAST_PIECE_OF_FILE_ARRIVED:
-                    arrivingFileTransfer.endOfFile(((Action_LastPieceOfFileArrived) networkAction).getField());
+                    viewModel.getIncomingFileTransferSummary().endOfFile(((Action_LastPieceOfFileArrived) networkAction).getField());
+                    incomingFileTransferUi.refresh(viewModel.getIncomingFileTransferSummary().getActiveTransfers());
                     break;
                 case RESTORE_LIST_OF_AVAILABLE_BACKUPS:
                     availableToRestore(((Action_RestoreListAvailable) networkAction).getField());
                     break;
                 case PIECE_OF_FILE_SENT:
-                    sendingFileTransfer.pieceOfFile(((Action_FilePieceSent) networkAction).getField());
+                    viewModel.getOutgoingFileTransferSummary().pieceOfFile(((Action_FilePieceSent) networkAction).getField());
+                    outgoingFileTransferUi.refresh(viewModel.getOutgoingFileTransferSummary().getActiveTransfers());
                     break;
                 case LAST_PIECE_OF_FILE_SENT:
-                    sendingFileTransfer.endOfFile(((Action_LastPieceOfFileSent) networkAction).getField());
+                    viewModel.getOutgoingFileTransferSummary().endOfFile(((Action_LastPieceOfFileSent) networkAction).getField());
+                    outgoingFileTransferUi.refresh(viewModel.getOutgoingFileTransferSummary().getActiveTransfers());
                     break;
             }
         }
@@ -105,8 +109,8 @@ public class ConnectedFragment extends Fragment {
 
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        arrivingFileTransfer=new FileTransferUI(this,binding.includedFileArrivingPanel);
-        sendingFileTransfer=new FileTransferUI(this,binding.includedFileSendingPanel);
+        incomingFileTransferUi =new FileTransferUI(this,binding.includedFileArrivingPanel, false);
+        outgoingFileTransferUi =new FileTransferUI(this,binding.includedFileSendingPanel, true);
 
         viewModel.getActions().register(actionObserver);
         viewModel.getUiData().observe(getViewLifecycleOwner(), new Observer<ConnectedFragmentUIData>() {
@@ -211,12 +215,23 @@ public class ConnectedFragment extends Fragment {
         binding.includedFileSendingPanel.filesSendingLayoutHome.setVisibility(View.GONE);
         binding.includedFileSendingPanel.progressBar.setMax(100);
         binding.includedFileSendingPanel.sendOrArriveLabel.setText("Sending:");
-        binding.includedFileSendingPanel.stopButton.setOnClickListener((view)->stopSending());
+        //binding.includedFileSendingPanel.stopButton.setOnClickListener((view)->stopSending());
+        binding.includedFileArrivingPanel.showAllFileTransferButton.setOnClickListener(v->showAllOutgoingTransfer());
 
         binding.includedFileArrivingPanel.filesSendingLayoutHome.setVisibility(View.GONE);
         binding.includedFileArrivingPanel.progressBar.setMax(100);
         binding.includedFileArrivingPanel.sendOrArriveLabel.setText("Saving:");
-        binding.includedFileArrivingPanel.stopButton.setOnClickListener((view)->stopSaving());
+        // binding.includedFileArrivingPanel.stopButton.setOnClickListener((view)->stopSaving());
+        binding.includedFileArrivingPanel.showAllFileTransferButton.setOnClickListener(v->showAllIncomingTransfer());
+    }
+
+    public void showAllIncomingTransfer(){
+        FileTransferQueueDialog newFragment = new FileTransferQueueDialog(viewModel.getIncomingFileTransferSummary().getActiveTransfers(),false);
+        newFragment.show(getChildFragmentManager(), "incomingFiles");
+    }
+    public void showAllOutgoingTransfer(){
+        FileTransferQueueDialog newFragment = new FileTransferQueueDialog(viewModel.getOutgoingFileTransferSummary().getActiveTransfers(),true);
+        newFragment.show(getChildFragmentManager(), "outgoingFiles");
     }
 
     private void setSource(boolean isDemo){
@@ -355,7 +370,7 @@ public class ConnectedFragment extends Fragment {
         if(backupList.isEmpty()){
             Toast.makeText(getContext(),"There's no available backup to restore",Toast.LENGTH_SHORT).show();
         }else {
-            ListDialog newFragment = new ListDialog(backupList);
+            RestoreListDialog newFragment = new RestoreListDialog(backupList);
             newFragment.show(getChildFragmentManager(), "backupListChooser");
         }
     }
