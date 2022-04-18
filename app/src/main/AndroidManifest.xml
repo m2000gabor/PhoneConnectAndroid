@@ -21,10 +21,12 @@
             android:name=".ui.SettingsActivity"
             android:exported="false"
             android:label="@string/title_activity_settings"
+            android:screenOrientation="nosensor"
             android:theme="@style/Theme.PhoneConnect.NoActionBar" />
         <activity
             android:name=".ui.MainActivity"
             android:theme="@style/Theme.PhoneConnect.NoActionBar"
+            android:screenOrientation="nosensor"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -39,6 +41,7 @@
             android:windowSoftInputMode="stateAlwaysHidden" />
         <activity
             android:name=".ui.PickLocationActivity"
+            android:screenOrientation="nosensor"
             android:stateNotNeeded="true" />
 
         <service
