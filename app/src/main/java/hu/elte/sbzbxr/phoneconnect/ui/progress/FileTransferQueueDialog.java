@@ -57,6 +57,7 @@ public class FileTransferQueueDialog extends DialogFragment{
                             //listener.onListItemSelected(entries.get(which),items.get(which));
                         }
                     });
+
             builder.setNegativeButton("Stop all", new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {

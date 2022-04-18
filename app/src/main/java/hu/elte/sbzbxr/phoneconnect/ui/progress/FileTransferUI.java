@@ -2,6 +2,7 @@ package hu.elte.sbzbxr.phoneconnect.ui.progress;
 
 import android.util.Log;
 import android.view.View;
+import android.widget.Toast;
 
 import java.util.Queue;
 
@@ -32,17 +33,26 @@ public class FileTransferUI {
                 binding.progressBarLabel.setText(percentage+"%");
                 binding.filenameTextView.setText(info.getFilename());
                 binding.progressBar.setVisibility(View.VISIBLE);
+                binding.stopButton.setVisibility(View.GONE);
 
                 if(activeTransfers.size()>1){
                     binding.showAllFileTransferButton.setVisibility(View.VISIBLE);
+
                     if(isOutgoing){
                         binding.showAllFileTransferButton.setOnClickListener(v->connectedFragment.showAllOutgoingTransfer());
                     }else{
                         binding.showAllFileTransferButton.setOnClickListener(v->connectedFragment.showAllIncomingTransfer());
                     }
-
                 }else{
                     binding.showAllFileTransferButton.setVisibility(View.GONE);
+                    if(isOutgoing){
+                        binding.stopButton.setVisibility(View.VISIBLE);
+                        binding.stopButton.setOnClickListener(v->{
+                            //todo use viewmodel/activity callback instead
+                            connectedFragment.getActivityCallback().getServiceController().getConnectionManager().clearOutgoingFileTransferQueue();
+                            Toast.makeText(v.getContext(),"File transfer cancelled",Toast.LENGTH_SHORT).show();
+                        });
+                    }
                 }
             }
         });

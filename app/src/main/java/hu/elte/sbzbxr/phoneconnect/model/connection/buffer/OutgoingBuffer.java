@@ -64,21 +64,17 @@ public class OutgoingBuffer {
     }
 
 
-    public void forceInsert(NetworkFrame frame){
+    public void forceInsert(NetworkFrame frame) throws InterruptedException {
         BufferPriority priority = getPriority(frame.type);
         if(frame.type== FrameType.SEGMENT){((ScreenShotFrame)frame).getScreenShot().addTimestamp("beforeInsert",System.currentTimeMillis());}
-        try {
-            if(priority==BufferPriority.SEGMENT){
-                if(!map.get(priority).offer(frame)){
-                    onBufferIsFull(map.get(priority),frame);
-                }
-            }else{
-                map.get(priority).put(frame);
+        if(priority==BufferPriority.SEGMENT){
+            if(!map.get(priority).offer(frame)){
+                onBufferIsFull(map.get(priority),frame);
             }
-            if(frame.type== FrameType.SEGMENT){((ScreenShotFrame)frame).getScreenShot().addTimestamp("inserted",System.currentTimeMillis());}
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        }else{
+            map.get(priority).put(frame);
         }
+        if(frame.type== FrameType.SEGMENT){((ScreenShotFrame)frame).getScreenShot().addTimestamp("inserted",System.currentTimeMillis());}
     }
 
     @NonNull
@@ -98,7 +94,7 @@ public class OutgoingBuffer {
         switch (type){
             default: return Integer.MAX_VALUE;
             case SEGMENT: return 5;
-            case FILE: return 20;
+            case FILE: return 10;
         }
     }
 

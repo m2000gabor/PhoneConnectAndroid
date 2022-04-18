@@ -394,4 +394,8 @@ public class ConnectedFragment extends Fragment {
     public MainViewModel getViewModel() {
         return viewModel;
     }
+
+    public MainActivityCallback getActivityCallback(){
+        return activityCallback;
+    }
 }

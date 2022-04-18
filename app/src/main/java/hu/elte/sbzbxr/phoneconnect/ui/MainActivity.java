@@ -84,6 +84,9 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
                     afterDisconnect();
                     Toast.makeText(MainActivity.this,"Cannot connect",Toast.LENGTH_SHORT).show();
                     break;
+                case REQUEST_UI_REFRESH:
+                     viewModel.refreshData(getServiceController());
+                     break;
             }
             }
         });
@@ -263,8 +266,10 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
 
     @Override
     public void stopAllOutgoingTransfer() {
+        //Toast.makeText(this,"This feature has not been implemented yet.",Toast.LENGTH_SHORT).show();
+
         if (getServiceController() != null) {
-            getServiceController().getConnectionManager().clearOutgoingFileQueue();
+            getServiceController().getConnectionManager().clearOutgoingFileTransferQueue();
         }
         Toast.makeText(this,"All outgoing transfers are stopped.",Toast.LENGTH_SHORT).show();
     }

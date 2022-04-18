@@ -22,10 +22,14 @@ import java.net.SocketException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import hu.elte.sbzbxr.phoneconnect.controller.MainViewModel;
+import hu.elte.sbzbxr.phoneconnect.model.actions.Action_FailMessage;
 import hu.elte.sbzbxr.phoneconnect.model.actions.Action_FailedToConnect;
+import hu.elte.sbzbxr.phoneconnect.model.actions.Action_RequestUiRefresh;
 import hu.elte.sbzbxr.phoneconnect.model.persistance.FileInFolderDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.persistance.MyFileDescriptor;
 import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_FilePieceArrived;
@@ -58,8 +62,8 @@ import hu.elte.sbzbxr.phoneconnect.ui.PickLocationActivity;
  */
 public class ConnectionManager {
     private static final String LOG_TAG = "ConnectionManager";
-    private boolean isListening = false;
-    private boolean isSending = false;
+    private final AtomicBoolean isListening = new AtomicBoolean(false);
+    private final AtomicBoolean isSending = new AtomicBoolean(false);
     private ConnectionLimiter limiter = ConnectionLimiter.noLimit();
 
     private Socket tcpSocket;
@@ -73,6 +77,13 @@ public class ConnectionManager {
 
     public ConnectionManager(Context context) {
         this.context=context;
+        try {
+            Class.forName("dalvik.system.CloseGuard")
+                    .getMethod("setEnabled", boolean.class)
+                    .invoke(null, true);
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public void folderChosen(Intent intent, int flags, int startId) {
@@ -113,14 +124,16 @@ public class ConnectionManager {
 
     public void disconnect(){
         try {
-            isListening =false;
-            isSending =false;
+            isListening.set(false);
+            isSending.set(false);
             if(in!=null) in.close();
             try{
                 if(tcpOutStream !=null) {tcpOutStream.close();}
             }catch (SocketException ignore){}
             if(tcpSocket !=null) {tcpSocket.close();}
+            closeUdp();
             viewModel.postAction(new Action_NetworkStateDisconnected());
+            clearOutgoingFileTransferQueue();
             outgoingBuffer.clear();
         } catch (IOException e) {
             e.printStackTrace();
@@ -130,7 +143,11 @@ public class ConnectionManager {
 
     //Tests whether the connection is valid
     public void sendMessage(MessageFrame frame){
-        outgoingBuffer.forceInsert(frame);
+        try {
+            outgoingBuffer.forceInsert(frame);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -148,8 +165,8 @@ public class ConnectionManager {
                 System.err.println("But its null!!");
             }
             System.out.println("Successful connection establishment");
-            isListening =true;
-            isSending=true;
+            isListening.set(true);
+            isSending.set(true);
             listen();
             startSendingThread();
 
@@ -161,12 +178,16 @@ public class ConnectionManager {
     private InetAddress address;
     private static final int UDP_SERVER_PORT = 4445;
     private void initUdp(String ip) {
-        try {
+        try{
             udpSocket=new DatagramSocket();
         } catch (SocketException e) {
             e.printStackTrace();
         }
         address=new InetSocketAddress(ip,UDP_SERVER_PORT).getAddress();
+    }
+
+    private void closeUdp(){
+        if(udpSocket!=null) udpSocket.close();
     }
 
 
@@ -184,7 +205,7 @@ public class ConnectionManager {
      */
     private void listen(){
         new Thread(() -> {
-            while (isListening) {
+            while (isListening.get()) {
                 try {
                     FrameType type = NetworkFrameCreator.getType(in);
                     if (type == FrameType.INVALID) {disconnect();}
@@ -257,7 +278,7 @@ public class ConnectionManager {
 
     private void startSendingThread(){
         new Thread(() ->{
-            while(isSending){
+            while(isSending.get()){
                 NetworkFrame sendable = outgoingBuffer.take();
                 if(sendable!=null){
                     if(sendable.type==FrameType.SEGMENT){
@@ -271,6 +292,8 @@ public class ConnectionManager {
             }
             limiter.stop();
         }).start();
+
+        startFileCutterThread();
     }
 
     public void sendNotification(NotificationFrame n) {
@@ -279,7 +302,7 @@ public class ConnectionManager {
             try{
                 outgoingBuffer.forceInsert(n);
                 Log.d(LOG_TAG,"Notification queued");
-            }catch(IllegalStateException e){
+            }catch(IllegalStateException | InterruptedException e){
                 Log.e(LOG_TAG,"The notification queue is full. Cannot add latest notification.");
             }
         }else{
@@ -289,46 +312,83 @@ public class ConnectionManager {
 
 
     private final ExecutorService fileCutterExecutorService = Executors.newSingleThreadExecutor();
-    private final AtomicBoolean stopFileSendingFlag = new AtomicBoolean(false);
+    private Future<?> currentFileCutterTask=null;
+    private final LinkedBlockingQueue<FileToSend> fileTransferSendingQueue = new LinkedBlockingQueue<FileToSend>();
     public void sendFiles(List<MyFileDescriptor> files, FrameType fileType, String backupId, long folderSize){
-
+        if(currentFileCutterTask==null || currentFileCutterTask.isCancelled()) startFileCutterThread();
         files.forEach(desc->{
-            viewModel.postAction(new Action_FilePieceSent(new FileFrame(
-                    fileType,desc.filename,desc.size,backupId,folderSize,new byte[0]
-            )));
-        });
-
-        fileCutterExecutorService.submit(()->{
-            for(MyFileDescriptor myFileDescriptor : files){
-                Log.d(LOG_TAG,"Would send the following file: "+ myFileDescriptor.filename);
-                FileCutter cutter = FileCutterCreator.create(myFileDescriptor,getContext().getContentResolver(),fileType, backupId,folderSize);
-
-                if(stopFileSendingFlag.get()) viewModel.postAction(new Action_LastPieceOfFileSent(cutter.current()));
-
-                //sending
-                while (!cutter.isEnd() && !stopFileSendingFlag.get()){
-                    outgoingBuffer.forceInsert(cutter.current());
-
-                    //notify ui that a piece of file sent
-                    viewModel.postAction(new Action_FilePieceSent(cutter.current()));
-
-                    cutter.next();
-                }
-                //notify ui that file sending completed
-                viewModel.postAction(new Action_LastPieceOfFileSent(cutter.current()));
+            if(fileTransferSendingQueue.offer(new FileToSend(desc,fileType,backupId,folderSize))){
+                viewModel.postAction(new Action_FilePieceSent(new FileFrame(
+                        fileType,desc.filename,desc.size,
+                        backupId,folderSize,new byte[0]
+                )));
+            }else{
+                viewModel.postAction(new Action_FailMessage("Cannot send file!"));
             }
-            outgoingBuffer.removeOutgoingFileFrames();
-            stopFileSendingFlag.set(false);
+        });
+        viewModel.postAction(new Action_RequestUiRefresh());
+    }
+
+    private void startFileCutterThread(){
+        if(! (currentFileCutterTask==null || currentFileCutterTask.isCancelled())) {currentFileCutterTask.cancel(true);}
+        currentFileCutterTask = fileCutterExecutorService.submit(()->{
+            try {
+            while(isSending.get()){
+                    FileToSend fileToSend = null;
+                    fileToSend = fileTransferSendingQueue.take();
+
+                    Log.d(LOG_TAG,"Would send the following file: "+ fileToSend.descriptor.filename);
+                    FileCutter cutter = FileCutterCreator.create(fileToSend.descriptor,getContext().getContentResolver(),fileToSend.fileType,fileToSend.backupId,fileToSend.folderSize);
+
+                    //sending
+                    while (!cutter.isEnd() && isSending.get()){
+                        try {
+                            outgoingBuffer.forceInsert(cutter.current());
+                        } catch (InterruptedException e) {
+                            System.err.println("FilePiece insertion interrupted");
+                            viewModel.postAction(new Action_LastPieceOfFileSent(cutter.current()));
+                            cutter.close();
+                            throw e;
+                        }
+
+                        //notify ui that a piece of file sent
+                        viewModel.postAction(new Action_FilePieceSent(cutter.current()));
+
+                        cutter.next();
+                    }
+                    //notify ui that file sending completed
+                    viewModel.postAction(new Action_LastPieceOfFileSent(cutter.current()));
+                    cutter.close();
+                }
+            } catch (InterruptedException e) {
+                System.err.println("FileCutting interrupted");
+                outgoingBuffer.clear();
+                return;
+            }
+            if(!isSending.get()){outgoingBuffer.clear();}
         });
     }
 
-    public void clearOutgoingFileQueue(){stopFileSendingFlag.set(true);}
+    public void clearOutgoingFileTransferQueue(){
+        currentFileCutterTask.cancel(true);
+        FileToSend fileToSend = fileTransferSendingQueue.poll();
+        while(fileToSend!=null){
+            viewModel.postAction(new Action_LastPieceOfFileSent(new FileFrame(
+                    fileToSend.fileType,fileToSend.descriptor.filename,fileToSend.descriptor.size,
+                    fileToSend.backupId,fileToSend.folderSize,new byte[0])));
+            fileToSend = fileTransferSendingQueue.poll();
+        }
+    }
 
     private final ExecutorService compressToJPGExecutorService = Executors.newFixedThreadPool(4);
     public void sendScreenShot(ScreenShot screenShot) {
         ScreenShotFrame screenShotFrame = new ScreenShotFrame(screenShot);
-        outgoingBuffer.forceInsert(screenShotFrame);
-        compressToJPGExecutorService.submit(screenShotFrame::transform);
+        try {
+            outgoingBuffer.forceInsert(screenShotFrame);
+            compressToJPGExecutorService.submit(screenShotFrame::transform);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     public Socket getTcpSocket() {
