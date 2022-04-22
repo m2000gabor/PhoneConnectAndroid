@@ -3,6 +3,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android">
 
     <EditTextPreference
+        app:isPreferenceVisible="false"
         android:defaultValue="@string/default_network_speed"
         android:key="@string/network_speed"
         android:digits="0123456789."

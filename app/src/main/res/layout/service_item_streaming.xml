@@ -18,6 +18,7 @@
 
     <CheckBox
         android:id="@+id/slowerNetworkCheckBox"
+        android:visibility="gone"
         android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -28,6 +29,7 @@
 
     <CheckBox
         android:id="@+id/demoSourceCheckBox"
+        android:visibility="gone"
         android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

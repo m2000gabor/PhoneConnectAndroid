@@ -8,7 +8,6 @@ import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketOptions;
 import java.net.UnknownHostException;
 
 //inspired: http://www.androidcoding.in/2020/05/12/work-manager_onetimeworkrequest/

@@ -30,7 +30,7 @@ public class MyUriQuery {
     }
 
     public static List<MyFileDescriptor> queryDirectory(ContentResolver contentResolver, Uri collection){
-        List<MyFileDescriptor> descriptors = new ArrayList<MyFileDescriptor>();
+        List<MyFileDescriptor> descriptors = new ArrayList<>();
         //Uri collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
 
         final String[] projection = new String[] {

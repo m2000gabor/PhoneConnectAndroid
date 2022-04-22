@@ -5,7 +5,6 @@ import static hu.elte.sbzbxr.phoneconnect.model.actions.helper.ActionType.RESTOR
 import java.util.AbstractMap;
 import java.util.ArrayList;
 
-import hu.elte.sbzbxr.phoneconnect.model.actions.helper.ActionType;
 import hu.elte.sbzbxr.phoneconnect.model.actions.helper.SingleFieldAction;
 
 public class Action_RestoreListAvailable extends SingleFieldAction<ArrayList<AbstractMap.SimpleImmutableEntry<String, Long>>> {

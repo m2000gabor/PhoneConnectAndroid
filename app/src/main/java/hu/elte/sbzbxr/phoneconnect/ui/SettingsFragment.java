@@ -1,6 +1,5 @@
 package hu.elte.sbzbxr.phoneconnect.ui;
 
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.InputType;
 import android.widget.Toast;
@@ -11,9 +10,7 @@ import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 
 import hu.elte.sbzbxr.phoneconnect.R;
-import hu.elte.sbzbxr.phoneconnect.controller.ServiceController;
 import hu.elte.sbzbxr.phoneconnect.model.persistance.MyPreferenceManager;
-import hu.elte.sbzbxr.phoneconnect.ui.notifications.NotificationSettings;
 
 public class SettingsFragment extends PreferenceFragmentCompat {
     private static final int MAX_PORT_NUMBER = 65536;

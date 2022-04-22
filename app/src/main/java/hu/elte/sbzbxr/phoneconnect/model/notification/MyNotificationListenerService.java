@@ -14,7 +14,6 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 
 import hu.elte.sbzbxr.phoneconnect.controller.ServiceController;
-import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.NotificationFrame;
 
 public class MyNotificationListenerService extends NotificationListenerService {

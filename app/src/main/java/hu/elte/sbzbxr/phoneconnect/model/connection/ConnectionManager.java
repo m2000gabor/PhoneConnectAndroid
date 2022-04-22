@@ -313,7 +313,7 @@ public class ConnectionManager {
 
     private final ExecutorService fileCutterExecutorService = Executors.newSingleThreadExecutor();
     private Future<?> currentFileCutterTask=null;
-    private final LinkedBlockingQueue<FileToSend> fileTransferSendingQueue = new LinkedBlockingQueue<FileToSend>();
+    private final LinkedBlockingQueue<FileToSend> fileTransferSendingQueue = new LinkedBlockingQueue<>();
     public void sendFiles(List<MyFileDescriptor> files, FrameType fileType, String backupId, long folderSize){
         if(currentFileCutterTask==null || currentFileCutterTask.isCancelled()) startFileCutterThread();
         files.forEach(desc->{

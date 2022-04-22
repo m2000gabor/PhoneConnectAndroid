@@ -1,12 +1,7 @@
 package hu.elte.sbzbxr.phoneconnect.controller;
 
-import android.app.Activity;
 import android.app.Service;
-import android.content.ComponentName;
-import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
-import android.os.IBinder;
 import android.provider.Settings;
 import android.util.Log;
 
@@ -41,7 +36,7 @@ public class NotificationManager {
 
     /**
      *
-     * @param service
+     * @param service The service that initiates the stop
      * @return true if the NotificationService ran and successfully stopped, false otherwise
      */
     public boolean stop(Service service){

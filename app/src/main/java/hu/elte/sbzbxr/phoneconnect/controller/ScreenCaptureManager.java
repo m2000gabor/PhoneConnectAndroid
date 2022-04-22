@@ -9,7 +9,7 @@ import android.util.DisplayMetrics;
 
 import androidx.annotation.Nullable;
 
-import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenCapture2;
+import hu.elte.sbzbxr.phoneconnect.model.recording.ScreenCapture;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 
 
@@ -32,7 +32,7 @@ public class ScreenCaptureManager {
     }
 
     private void start(MainActivity mainActivity, int resultCode, Intent data, boolean real){
-        new Thread(() -> serviceController.bindService(new Intent(serviceController, ScreenCapture2.class),connection,Context.BIND_AUTO_CREATE)).start();
+        new Thread(() -> serviceController.bindService(new Intent(serviceController, ScreenCapture.class),connection,Context.BIND_AUTO_CREATE)).start();
 
         DisplayMetrics lastMetrics = setupMetrics(mainActivity);
 
@@ -55,11 +55,11 @@ public class ScreenCaptureManager {
         }catch (IllegalArgumentException e){
             //e.printStackTrace();
             mBound = false;
-            screenCapture2 = null;
+            screenCapture = null;
         }
     }
 
-    @Nullable private ScreenCapture2 screenCapture2;
+    @Nullable private ScreenCapture screenCapture;
     private boolean mBound = false;
     private final ServiceConnection connection = new ServiceConnection() {
 
@@ -67,16 +67,16 @@ public class ScreenCaptureManager {
         public void onServiceConnected(ComponentName className,
                                        IBinder service) {
             // We've bound to LocalService, cast the IBinder and get LocalService instance
-            ScreenCapture2.LocalBinder binder = (ScreenCapture2.LocalBinder) service;
-            screenCapture2 = binder.getService();
+            ScreenCapture.LocalBinder binder = (ScreenCapture.LocalBinder) service;
+            screenCapture = binder.getService();
             mBound = true;
-            screenCapture2.start(serviceController, serviceController.getNotification(), lastInitIntent);
+            screenCapture.start(serviceController, serviceController.getNotification(), lastInitIntent);
         }
 
         @Override
         public void onServiceDisconnected(ComponentName arg0) {
             mBound = false;
-            screenCapture2 = null;
+            screenCapture = null;
         }
     };
 

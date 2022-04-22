@@ -5,15 +5,9 @@ import android.graphics.Bitmap;
 
 import androidx.annotation.NonNull;
 
-import java.io.ByteArrayOutputStream;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.AbstractMap;
-import java.util.Calendar;
-import java.util.HashMap;
 import java.util.LinkedList;
-
-import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.SegmentFrame;
 
 public class ScreenShot{
     public static final int JPEG_QUALITY=10;

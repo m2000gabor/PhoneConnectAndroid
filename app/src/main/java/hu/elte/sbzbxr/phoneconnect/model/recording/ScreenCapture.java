@@ -4,12 +4,9 @@ import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.Service;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.graphics.Bitmap;
 import android.graphics.PixelFormat;
 import android.hardware.display.DisplayManager;
@@ -20,23 +17,16 @@ import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
 import android.os.Binder;
 import android.os.IBinder;
-import android.util.Log;
 import android.view.Surface;
-
-import androidx.annotation.Nullable;
-import androidx.core.app.NotificationCompat;
 
 import java.nio.Buffer;
 import java.text.DateFormat;
 import java.util.Calendar;
-import java.util.concurrent.TimeUnit;
 
 import hu.elte.sbzbxr.phoneconnect.controller.ServiceController;
-import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
-import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 
-public class ScreenCapture2 extends Service {
-    private static final String LOG_TAG ="ScreenCapture2";
+public class ScreenCapture extends Service {
+    private static final String LOG_TAG ="ScreenCapture";
     private static final String VIRTUAL_DISPLAY_NAME= "VirtualDisplay";
     MediaProjection projection;
     MediaProjectionManager mediaProjectionManager;
@@ -44,13 +34,13 @@ public class ScreenCapture2 extends Service {
     ImageReader imageReader;
     private ServiceController serviceController;
 
-    public ScreenCapture2(){}
+    public ScreenCapture(){}
 
-    private final IBinder binder = new ScreenCapture2.LocalBinder();
+    private final IBinder binder = new ScreenCapture.LocalBinder();
     public class LocalBinder extends Binder {
-        public ScreenCapture2 getService() {
+        public ScreenCapture getService() {
             // Return this instance of LocalService so clients can call public methods
-            return ScreenCapture2.this;
+            return ScreenCapture.this;
         }
     }
     @Override

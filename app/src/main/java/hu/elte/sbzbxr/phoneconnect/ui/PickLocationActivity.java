@@ -8,7 +8,6 @@ import android.os.Bundle;
 import androidx.annotation.Nullable;
 
 import hu.elte.sbzbxr.phoneconnect.controller.ServiceController;
-import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
 
 public class PickLocationActivity extends Activity {
     private static final int REQUEST_USER_CHOOSE_FOLDER = 3;
