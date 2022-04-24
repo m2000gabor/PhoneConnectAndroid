@@ -35,9 +35,9 @@ public class ConnectionCreator extends RunnableWithHandler {
         try{
             try {
                 socket = new Socket();
-                socket.setTcpNoDelay(true);
-                socket.setTrafficClass(0x10);//low-delay
-                socket.connect(new InetSocketAddress(InetAddress.getByName(ip),port));
+                //socket.setTcpNoDelay(true);
+                //socket.setTrafficClass(0x10);//low-delay
+                socket.connect(new InetSocketAddress(InetAddress.getByName(ip),port),5000);
             } catch (UnknownHostException e) {
                 System.err.println("Unknown host");
                 e.printStackTrace();
