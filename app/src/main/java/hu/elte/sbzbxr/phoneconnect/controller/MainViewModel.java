@@ -79,10 +79,12 @@ public class MainViewModel extends AndroidViewModel {
         }
         NetworkStateAction oldVal = connectionData.getValue();
         NetworkStateAction newVal;
-        Socket s = serviceController.isConnected();
-        if(s!=null){
+        Socket s = serviceController.getSocket();
+        if(ServiceController.isConnected(s)){
+            Log.d(MainViewModel.class.toString(),"Determine whether it is connected. Result: connected");
             newVal=new Action_NetworkStateConnected(s.getInetAddress().getHostAddress(),s.getPort());
         }else{
+            Log.d(MainViewModel.class.toString(),"Determine whether it is connected. Result: disconnected");
             newVal=new Action_NetworkStateDisconnected();
         }
 

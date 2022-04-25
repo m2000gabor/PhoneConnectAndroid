@@ -10,6 +10,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
+import androidx.annotation.Nullable;
+
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -130,7 +132,7 @@ public class ConnectionManager {
             try{
                 if(tcpOutStream !=null) {tcpOutStream.close();}
             }catch (SocketException ignore){}
-            if(tcpSocket !=null) {tcpSocket.close();}
+            if(tcpSocket !=null) {tcpSocket.close(); tcpSocket=null;}
             closeUdp();
             viewModel.postAction(new Action_NetworkStateDisconnected());
             clearOutgoingFileTransferQueue();
@@ -182,12 +184,13 @@ public class ConnectionManager {
             udpSocket=new DatagramSocket();
         } catch (SocketException e) {
             e.printStackTrace();
+            closeUdp();
         }
         address=new InetSocketAddress(ip,UDP_SERVER_PORT).getAddress();
     }
 
     private void closeUdp(){
-        if(udpSocket!=null) udpSocket.close();
+        if(udpSocket!=null){ udpSocket.close();udpSocket=null;}
     }
 
 
@@ -370,6 +373,7 @@ public class ConnectionManager {
     }
 
     public void clearOutgoingFileTransferQueue(){
+        if(currentFileCutterTask==null) return;
         currentFileCutterTask.cancel(true);
         FileToSend fileToSend = fileTransferSendingQueue.poll();
         while(fileToSend!=null){
@@ -391,6 +395,7 @@ public class ConnectionManager {
         }
     }
 
+    @Nullable
     public Socket getTcpSocket() {
         return tcpSocket;
     }

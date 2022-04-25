@@ -166,10 +166,14 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
         super.onStart();
         Intent intent = new Intent(this, ServiceController.class);
         bindService(intent, connection, Context.BIND_IMPORTANT);
+        viewModel.refreshData(getServiceController());
     }
 
     @Override
     protected void onStop() {
+        if (getServiceController() != null) {
+            getServiceController().mayStop();
+        }
         unbindService(connection);
         mBound = false;
         super.onStop();
@@ -236,6 +240,7 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
 
     @Override
     public boolean connectToServer(String ip, int port) {
+        if(getServiceController()==null) return false;
         boolean r = getServiceController().connectToServer(ip, port);
         LoadingDialog loadingDialog = new LoadingDialog("Connecting...");
         FragmentManager fragmentManager = getSupportFragmentManager();
@@ -260,7 +265,7 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
 
     @Override
     protected void onDestroy() {
-        stopService(new Intent(this,ServiceController.class));
+        //stopService(new Intent(this,ServiceController.class));
         super.onDestroy();
     }
 

@@ -11,6 +11,8 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 
+import androidx.annotation.Nullable;
+import androidx.annotation.WorkerThread;
 import androidx.core.app.NotificationCompat;
 
 import java.net.Socket;
@@ -96,7 +98,26 @@ public class ServiceController extends Service {
 
     @Override
     public void onDestroy() {
+        new Thread(
+                ()->{
+                    stopScreenCapture();
+                    connectionManager.disconnect();
+                }
+        ){}.start();
         Log.d(LOG_TAG, "serviceController destroyed");
+        super.onDestroy();
+    }
+
+    @Override
+    public boolean onUnbind(Intent intent) {
+        mayStop();
+        return super.onUnbind(intent);
+    }
+
+    public void mayStop(){
+        if(!isConnected(getSocket())){
+            stopSelf();
+        }
     }
 
     public void refreshData(MainViewModel viewModel) {
@@ -133,7 +154,7 @@ public class ServiceController extends Service {
 
     public void disconnectFromServer() {
         new Thread(()->{
-            screenCaptureManager.stop();
+            stopScreenCapture();
             connectionManager.disconnect();
         }).start();
     }
@@ -172,11 +193,15 @@ public class ServiceController extends Service {
         connectionManager.sendFiles(myFileDescriptors, FrameType.BACKUP_FILE, backupId, folderSize);
     }
 
-    /**
-     * @return the socket if connected, null otherwise
-     */
-    public Socket isConnected() {
+
+    @Nullable
+    public Socket getSocket() {
         return connectionManager.getTcpSocket();
+    }
+
+    public static boolean isConnected(@Nullable Socket socket){
+        if(socket ==null) return false;
+        return socket.isConnected() && !socket.isClosed();
     }
 
     public void setNetworkLimit(ConnectionLimiter limiter) {
@@ -200,10 +225,10 @@ public class ServiceController extends Service {
     }
 
     public ConnectedFragmentUIData getConnectedUIData(){
-        Socket s = isConnected();
+        Socket s = getSocket();
         String ip = null;
         String port = null;
-        if(s!=null){
+        if(s!=null && s.isConnected()){
             ip=s.getInetAddress().getHostAddress();
             port = String.valueOf(s.getPort());
         }
