@@ -158,6 +158,9 @@ public class ServiceController extends Service {
         connectionManager.sendMessage(new StartRestoreMessageFrame(restoreID));
     }
 
+    public void startFileTransfer(List<MyFileDescriptor> myFileDescriptors) {
+        connectionManager.sendFiles(myFileDescriptors, FrameType.FILE, null, 0);
+    }
     public void startFileTransfer(MyFileDescriptor myFileDescriptor) {
         connectionManager.sendFiles(Collections.singletonList(myFileDescriptor), FrameType.FILE, null, 0);
     }

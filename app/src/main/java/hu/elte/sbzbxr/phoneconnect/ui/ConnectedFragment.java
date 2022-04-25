@@ -2,6 +2,7 @@ package hu.elte.sbzbxr.phoneconnect.ui;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
 import android.icu.text.DateFormat;
@@ -144,17 +145,29 @@ public class ConnectedFragment extends Fragment {
         }else if(requestCode == REQUEST_FILE_PICKER && resultCode==Activity.RESULT_OK){
             // The result data contains a URI for the document or directory that
             // the user selected.
-            Uri uri;
             if (data != null) {
-                uri = data.getData();
-                // Perform operations on the document using its URI.
-                activityCallback.getServiceController().startFileTransfer(MyUriQuery.querySingleFile(uri,requireContext()));
+                ClipData clipData = data.getClipData();
+                if(clipData==null){//just one file is selected
+                    Uri uri = data.getData();
+                    // Perform operations on the document using its URI.
+                    activityCallback.getServiceController().startFileTransfer(MyUriQuery.querySingleFile(uri,requireContext()));
+                }else{//multiple files are selected
+                    List<MyFileDescriptor> descriptors = new ArrayList<>(clipData.getItemCount());
+                    for(int i = 0; i < clipData.getItemCount(); i++)
+                    {
+                        Uri uri = clipData.getItemAt(i).getUri();
+                        descriptors.add(MyUriQuery.querySingleFile(uri,requireContext()));
+
+                    }
+                    activityCallback.getServiceController().startFileTransfer(descriptors);
+                }
             }
         }
     }
 
 
     public void showConnectedUI(ConnectedFragmentUIData data){
+
         if(data.getIp()!=null && data.getPort()!=null){
             binding.connectedToLabel.setText(String.format("Connected to: %s:%s", data.getIp(),data.getPort()));
         }
@@ -262,6 +275,7 @@ public class ConnectedFragment extends Fragment {
         //Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
         intent.setType("*/*");
 
         // Optionally, specify a URI for the file that should appear in the
