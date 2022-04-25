@@ -14,6 +14,7 @@ import java.util.Queue;
 import java.util.stream.Collectors;
 
 import hu.elte.sbzbxr.phoneconnect.model.fileTransferProgress.FrameProgressInfo;
+import hu.elte.sbzbxr.phoneconnect.ui.ConnectedFragment;
 
 public class FileTransferQueueDialog extends DialogFragment{
 
@@ -29,7 +30,8 @@ public class FileTransferQueueDialog extends DialogFragment{
 
         public FileTransferQueueDialog(Queue<FrameProgressInfo> progressQueue, boolean isOutgoing) {
             this.progressQueue = progressQueue;
-            this.items = progressQueue.stream().map(entry->entry.getFilename()+" ("+entry.getFileSize()+" bytes)").collect(Collectors.toList());
+            this.items = progressQueue.stream().map(entry->entry.getFilename()+" ("+
+                    ConnectedFragment.convertBytesToPrettyString(entry.getFileSize())+")").collect(Collectors.toList());
             this.isOutgoing = isOutgoing;
         }
 

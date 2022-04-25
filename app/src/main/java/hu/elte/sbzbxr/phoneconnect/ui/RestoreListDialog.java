@@ -26,7 +26,8 @@ public class RestoreListDialog extends DialogFragment {
 
     public RestoreListDialog(ArrayList<AbstractMap.SimpleImmutableEntry<String, Long>> backupList) {
         this.entries = backupList;
-        this.items = backupList.stream().map(entry->entry.getKey()+" ("+entry.getValue()+" bytes)").collect(Collectors.toList());
+        this.items = backupList.stream().map(entry->entry.getKey()+" ("+
+                ConnectedFragment.convertBytesToPrettyString(entry.getValue())+")").collect(Collectors.toList());
     }
 
     @Override

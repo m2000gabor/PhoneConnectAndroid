@@ -27,6 +27,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 
+import java.text.DecimalFormat;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -411,5 +412,17 @@ public class ConnectedFragment extends Fragment {
 
     public MainActivityCallback getActivityCallback(){
         return activityCallback;
+    }
+
+    //From: https://www.baeldung.com/java-folder-size
+    public static String convertBytesToPrettyString(long sizeInBytes){
+        if(sizeInBytes==0){return "0 B";}
+        String[] units = new String[] { "B", "KB", "MB", "GB", "TB" };
+        int unitIndex = (int) (Math.log10(sizeInBytes) / 3);
+        double unitValue = 1 << (unitIndex * 10);
+
+        return new DecimalFormat("#,##0.#")
+                .format(sizeInBytes / unitValue) + " "
+                + units[unitIndex];
     }
 }
