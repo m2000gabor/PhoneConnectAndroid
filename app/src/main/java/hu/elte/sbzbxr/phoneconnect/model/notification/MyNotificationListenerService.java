@@ -19,7 +19,7 @@ import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.NotificationFra
 public class MyNotificationListenerService extends NotificationListenerService {
     private static final String LOG_TAG = "NotificationListener";
     @Nullable private ServiceController controller;
-    private boolean isListening=false;
+    private boolean isConnectedToSystem =false;
     private boolean isStopped=false;
 
     private NotificationFrame getUsefulData(StatusBarNotification notification){
@@ -76,9 +76,8 @@ public class MyNotificationListenerService extends NotificationListenerService {
 
     @Override
     public void onListenerConnected() {
-        Log.v(LOG_TAG,"NotificationListener connected");
-        super.onListenerConnected();
-        isListening=true;
+        Log.i(LOG_TAG,"NotificationListener connected");
+        isConnectedToSystem =true;
         isStopped=false;
 
         if(!mBound){
@@ -94,9 +93,8 @@ public class MyNotificationListenerService extends NotificationListenerService {
     @Override
     public void onListenerDisconnected() {
         Log.v(LOG_TAG,"NotificationListener disconnected");
-        isListening=false;
+        isConnectedToSystem =false;
         isStopped=true;
-        super.onListenerDisconnected();
     }
 
     boolean mBound=false;
@@ -124,11 +122,12 @@ public class MyNotificationListenerService extends NotificationListenerService {
         }
     };
 
-    public boolean isListening(){
-        return isListening && !isStopped;
+    public boolean isConnectedToSystem(){
+        return isConnectedToSystem && !isStopped;
     }
 
     public void stop(){
+        if(!isConnectedToSystem) return;
         isStopped=true;
         stopSelf();
     }

@@ -57,7 +57,7 @@ public class NotificationManager {
 
     public boolean isListening(){
         if(notificationListenerService==null) return false;
-        return notificationListenerService.isListening();
+        return notificationListenerService.isConnectedToSystem();
     }
 
     public void setNotificationListenerService(@Nullable MyNotificationListenerService notificationListenerService) {
