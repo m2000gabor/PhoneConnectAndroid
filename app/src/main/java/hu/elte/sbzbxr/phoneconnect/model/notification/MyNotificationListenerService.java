@@ -76,14 +76,11 @@ public class MyNotificationListenerService extends NotificationListenerService {
 
     @Override
     public void onListenerConnected() {
-        Log.i(LOG_TAG,"NotificationListener connected");
+        Log.i(LOG_TAG,"NotificationListener connected to system");
         isConnectedToSystem =true;
         isStopped=false;
 
-        if(!mBound){
-            Intent i = new Intent(this, ServiceController.class);
-            bindService(i, mConnection, Context.BIND_IMPORTANT);
-        }
+        doBindService();
 
         for(StatusBarNotification notification : getActiveNotifications()){
             sendNotification(notification);
@@ -92,12 +89,12 @@ public class MyNotificationListenerService extends NotificationListenerService {
 
     @Override
     public void onListenerDisconnected() {
-        Log.v(LOG_TAG,"NotificationListener disconnected");
+        Log.v(LOG_TAG,"NotificationListener disconnected from system");
         isConnectedToSystem =false;
         isStopped=true;
     }
 
-    boolean mBound=false;
+    boolean mShouldUnbind=false;
     private final ServiceConnection mConnection = new ServiceConnection() {
         // Called when the connection with the service is established
         public void onServiceConnected(ComponentName className, IBinder service) {
@@ -107,7 +104,6 @@ public class MyNotificationListenerService extends NotificationListenerService {
             ServiceController.LocalBinder binder = (ServiceController.LocalBinder) service;
             controller = binder.getService();
             controller.getNotificationManager().setNotificationListenerService(MyNotificationListenerService.this);
-            mBound = true;
             isStopped=false;
             controller.refreshData(controller.getConnectionManager().getViewModel());
         }
@@ -115,7 +111,6 @@ public class MyNotificationListenerService extends NotificationListenerService {
         // Called when the connection with the service disconnects unexpectedly
         public void onServiceDisconnected(ComponentName className) {
             Log.e("ScreenCapture", "onServiceDisconnected");
-            mBound = false;
             controller.getNotificationManager().setNotificationListenerService(null);
             controller = null;
             isStopped=true;
@@ -127,8 +122,36 @@ public class MyNotificationListenerService extends NotificationListenerService {
     }
 
     public void stop(){
-        if(!isConnectedToSystem) return;
         isStopped=true;
-        stopSelf();
+        if(!isConnectedToSystem) return;
+        doUnbindService();
+        try{
+            requestUnbind();
+        }catch (SecurityException e){
+            Log.w(LOG_TAG,e.getMessage());
+        }
+    }
+
+    void doBindService() {
+        if (bindService(new Intent(this, ServiceController.class), mConnection, Context.BIND_IMPORTANT)) {
+            mShouldUnbind = true;
+        } else {
+            Log.e(LOG_TAG, "The requested service doesn't " +
+                    "exist, or this client isn't allowed access to it.");
+        }
+    }
+
+    void doUnbindService() {
+        if (mShouldUnbind) {
+            // Release information about the service's state.
+            unbindService(mConnection);
+            mShouldUnbind = false;
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        doUnbindService();
     }
 }
