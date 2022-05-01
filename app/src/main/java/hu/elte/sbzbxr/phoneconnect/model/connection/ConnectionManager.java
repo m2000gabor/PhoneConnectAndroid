@@ -146,7 +146,7 @@ public class ConnectionManager {
     //Tests whether the connection is valid
     public void sendMessage(MessageFrame frame){
         try {
-            outgoingBuffer.forceInsert(frame);
+            outgoingBuffer.put(frame);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -303,7 +303,7 @@ public class ConnectionManager {
         if(n==null){Log.d(LOG_TAG,"Cannot send >>null<< notification");return;}
         if(viewModel.notificationFilter.toForward(n.appName)){
             try{
-                outgoingBuffer.forceInsert(n);
+                outgoingBuffer.put(n);
                 Log.d(LOG_TAG,"Notification queued");
             }catch(IllegalStateException | InterruptedException e){
                 Log.e(LOG_TAG,"The notification queue is full. Cannot add latest notification.");
@@ -346,7 +346,7 @@ public class ConnectionManager {
                     //sending
                     while (!cutter.isEnd() && isSending.get()){
                         try {
-                            outgoingBuffer.forceInsert(cutter.current());
+                            outgoingBuffer.put(cutter.current());
                         } catch (InterruptedException e) {
                             System.err.println("FilePiece insertion interrupted");
                             viewModel.postAction(new Action_LastPieceOfFileSent(cutter.current()));
@@ -388,7 +388,7 @@ public class ConnectionManager {
     public void sendScreenShot(ScreenShot screenShot) {
         ScreenShotFrame screenShotFrame = new ScreenShotFrame(screenShot);
         try {
-            outgoingBuffer.forceInsert(screenShotFrame);
+            outgoingBuffer.put(screenShotFrame);
             compressToJPGExecutorService.submit(screenShotFrame::transform);
         } catch (InterruptedException e) {
             e.printStackTrace();

@@ -62,6 +62,7 @@ public class ToConnectFragment extends Fragment {
             } else {
                 Log.v("Scan", "Scanned: "+result.getContents());
                 String[] scanned = result.getContents().split(":");
+                if(scanned.length!=2){Log.e("Scan","Invalid data");return;}
                 fillEditTexts(scanned[0],scanned[1]);
                 binding.connectButton.callOnClick();
             }
@@ -104,9 +105,8 @@ public class ToConnectFragment extends Fragment {
         binding.readQrButton.setOnClickListener(v -> startQrReaderActivity());
     }
 
-
+    //Based on: https://stackoverflow.com/questions/8831050/android-how-to-read-qr-code-in-my-application
     public void startQrReaderActivity(){
-        //From: https://stackoverflow.com/questions/8831050/android-how-to-read-qr-code-in-my-application
         //Docs: https://zxing.github.io/zxing/apidocs/com/google/zxing/integration/android/IntentIntegrator.html#IntentIntegrator-android.app.Fragment-
         IntentIntegrator.forSupportFragment(ToConnectFragment.this)
                 .setCaptureActivity(QrReaderActivity.class)

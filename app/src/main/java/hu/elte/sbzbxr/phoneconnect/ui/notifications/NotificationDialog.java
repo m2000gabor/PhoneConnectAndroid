@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import hu.elte.sbzbxr.phoneconnect.R;
+import hu.elte.sbzbxr.phoneconnect.model.notification.NotificationPair;
 
 public class NotificationDialog extends DialogFragment {
     private final List<NotificationPair> notificationPairs;

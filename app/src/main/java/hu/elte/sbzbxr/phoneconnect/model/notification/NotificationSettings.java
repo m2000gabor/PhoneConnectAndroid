@@ -1,4 +1,4 @@
-package hu.elte.sbzbxr.phoneconnect.ui.notifications;
+package hu.elte.sbzbxr.phoneconnect.model.notification;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -13,6 +13,8 @@ import java.util.stream.Collectors;
 
 import hu.elte.sbzbxr.phoneconnect.ui.ConnectedFragment;
 import hu.elte.sbzbxr.phoneconnect.ui.LoadingDialog;
+import hu.elte.sbzbxr.phoneconnect.ui.notifications.NotificationDialog;
+import hu.elte.sbzbxr.phoneconnect.ui.notifications.SaveList;
 
 public class NotificationSettings implements SaveList {
     public final static String PREF_FILE_NOTIFICATION = "hu.elte.sbzbxr.phoneconnect.ui.notifications."+"notificationsNotToSend";

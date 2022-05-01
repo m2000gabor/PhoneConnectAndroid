@@ -47,7 +47,7 @@ import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_RestoreListAvail
 import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_FilePieceSent;
 import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_LastPieceOfFileSent;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionLimiter;
-import hu.elte.sbzbxr.phoneconnect.ui.notifications.NotificationSettings;
+import hu.elte.sbzbxr.phoneconnect.model.notification.NotificationSettings;
 import hu.elte.sbzbxr.phoneconnect.ui.progress.FileTransferQueueDialog;
 import hu.elte.sbzbxr.phoneconnect.ui.progress.FileTransferUI;
 

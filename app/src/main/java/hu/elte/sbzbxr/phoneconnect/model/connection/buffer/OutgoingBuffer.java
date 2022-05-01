@@ -64,7 +64,7 @@ public class OutgoingBuffer {
     }
 
 
-    public void forceInsert(NetworkFrame frame) throws InterruptedException {
+    public void put(NetworkFrame frame) throws InterruptedException {
         BufferPriority priority = getPriority(frame.type);
         if(frame.type== FrameType.SEGMENT){((ScreenShotFrame)frame).getScreenShot().addTimestamp("beforeInsert",System.currentTimeMillis());}
         if(priority==BufferPriority.SEGMENT){
