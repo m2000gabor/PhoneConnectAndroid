@@ -28,6 +28,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import hu.elte.sbzbxr.phoneconnect.BuildConfig;
 import hu.elte.sbzbxr.phoneconnect.controller.MainViewModel;
 import hu.elte.sbzbxr.phoneconnect.model.actions.Action_FailMessage;
 import hu.elte.sbzbxr.phoneconnect.model.actions.Action_FailedToConnect;
@@ -79,12 +80,14 @@ public class ConnectionManager {
 
     public ConnectionManager(Context context) {
         this.context=context;
-        try {
-            Class.forName("dalvik.system.CloseGuard")
-                    .getMethod("setEnabled", boolean.class)
-                    .invoke(null, true);
-        } catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
+        if( BuildConfig.DEBUG ){
+            try {
+                Class.forName("dalvik.system.CloseGuard")
+                        .getMethod("setEnabled", boolean.class)
+                        .invoke(null, true);
+            } catch (ReflectiveOperationException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 

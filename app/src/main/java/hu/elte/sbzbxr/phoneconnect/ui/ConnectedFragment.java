@@ -27,6 +27,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 
+import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -357,7 +358,15 @@ public class ConnectedFragment extends Fragment {
         if(dfile==null) return;
         String backupID = DateFormat.getDateTimeInstance().format(Calendar.getInstance().getTime())
                 .replace(':','_').replace(' ','_');
-        DocumentFile[] fileList = getFilesFromDir(dfile);
+        DocumentFile[] fileList = new DocumentFile[0];
+        try {
+            fileList = getFilesFromDir(dfile,0);
+        } catch (IOException e) {
+            e.printStackTrace();
+            Toast.makeText(requireContext(),"Cannot send more than a 100 files",Toast.LENGTH_SHORT).show();
+            Log.e(TAG,"Cannot send more than a 100 files");
+            return;
+        }
         long totalSize = Arrays.stream(fileList).map(DocumentFile::length).reduce(0L, Long::sum);
         List<MyFileDescriptor> fileDescriptorList = new ArrayList<>(fileList.length);
         for(DocumentFile documentFile : fileList){
@@ -366,13 +375,14 @@ public class ConnectedFragment extends Fragment {
         activityCallback.getServiceController().sendBackupFiles(fileDescriptorList,backupID,totalSize);
     }
 
-    private DocumentFile[] getFilesFromDir(DocumentFile parent){
+    private DocumentFile[] getFilesFromDir(DocumentFile parent, long numOfCall) throws IOException {
+        if(numOfCall>=100) throw new IOException("Too much file to send");
         if(parent==null || !parent.exists()) return new DocumentFile[0];
         if(parent.isDirectory()){
             DocumentFile[] documentFiles = parent.listFiles();
             ArrayList<DocumentFile> ret = new ArrayList<>();
             for(DocumentFile d: documentFiles){
-                ret.addAll(Arrays.asList(getFilesFromDir(d)));
+                ret.addAll(Arrays.asList(getFilesFromDir(d,++numOfCall)));
             }
             return ret.toArray(new DocumentFile[0]);
         }else{
