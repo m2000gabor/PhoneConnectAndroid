@@ -63,6 +63,7 @@ public class FrameProgressInfoTest {
         assertFalse(info.isFileArrived());
         checkBaseDataHasntChanged(original,info);
 
+        info = FrameProgressInfo.updateProgress(info,data.length-1);
         assertTrue(info.isFileArrived());
         assertEquals(data.length, info.getArrivedBytesFromFile());
         checkBaseDataHasntChanged(original,info);
