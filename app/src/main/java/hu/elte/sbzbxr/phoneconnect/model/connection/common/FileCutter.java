@@ -11,7 +11,7 @@ import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.SegmentFrame;
 
 //version: 1.6
 public class FileCutter {
-    private static final int FILE_FRAME_MAX_SIZE=320000;//in bytes
+    static final int FILE_FRAME_MAX_SIZE=320000;//in bytes
     private final InputStream inputStream;
     private final String filename;
     private boolean hadClosingPart =false;
