@@ -4,8 +4,12 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
+import com.google.android.material.resources.TextAppearance;
+import com.google.android.material.resources.TextAppearanceFontCallback;
+
 import java.util.Queue;
 
+import hu.elte.sbzbxr.phoneconnect.R;
 import hu.elte.sbzbxr.phoneconnect.databinding.ServiceItemFileSendingBinding;
 import hu.elte.sbzbxr.phoneconnect.model.fileTransferProgress.FrameProgressInfo;
 import hu.elte.sbzbxr.phoneconnect.ui.ConnectedFragment;
@@ -32,6 +36,7 @@ public class FileTransferUI {
                 binding.progressBar.setProgress(percentage);
                 binding.progressBarLabel.setText(percentage+"%");
                 binding.filenameTextView.setText(info.getFilename());
+                binding.filenameTextView.setTextAppearance(R.style.TextAppearance_MaterialComponents_Headline6);
                 binding.progressBar.setVisibility(View.VISIBLE);
                 binding.stopButton.setVisibility(View.GONE);
 
