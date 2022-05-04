@@ -1,11 +1,18 @@
 package hu.elte.sbzbxr.phoneconnect.model.notification;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.content.res.Resources;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -47,20 +54,75 @@ public class NotificationSettings implements SaveList {
     public void showDialog() {
         LoadingDialog loadingDialog = new LoadingDialog("Loading...");
         loadingDialog.show(connectedFragment.getParentFragmentManager(),"loading");
-        final PackageManager pm = connectedFragment.requireActivity().getPackageManager();
+        new Thread(()->{
+            final PackageManager pm = connectedFragment.requireActivity().getPackageManager();
+            List<CharSequence> appNames = getAppNames2(pm).stream()
+                    .sorted()
+                    .distinct()
+                    .collect(Collectors.toList());
+            List<String> storedExceptions = getDisabledNotifications();
+            for(CharSequence ch : appNames){
+                notificationPairs.add(new NotificationPair(ch.toString(),!storedExceptions.contains(ch.toString())));
+            }
+            new Handler(Looper.getMainLooper()).post(() -> {
+                // Code here will run in UI thread
+                loadingDialog.dismiss();
+                new NotificationDialog(notificationPairs,NotificationSettings.this).show(connectedFragment.getParentFragmentManager(),"notificationSettings");
+            });
+        }).start();
+    }
+
+    public List<CharSequence> getAppNames(final PackageManager pm){
         List<ApplicationInfo> packages = pm.getInstalledApplications(PackageManager.GET_META_DATA);
         List<CharSequence> appNames = packages.stream()
                 .filter(ai->ai.flags!=ApplicationInfo.FLAG_SYSTEM)
                 .filter(ai->ai.flags!=ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)
-                .map(pm::getApplicationLabel)
+                .map(ai -> {
+                    try {
+                        Log.e("getApplicationLabel of :",ai.className);
+                        return pm.getApplicationLabel(ai);
+                    }catch (Exception e){
+                        e.printStackTrace();
+                        return "Unknown";
+                    }
+                })
                 .distinct()
                 .collect(Collectors.toList());
-        List<String> storedExceptions = getDisabledNotifications();
-        for(CharSequence ch : appNames){
-            notificationPairs.add(new NotificationPair(ch.toString(),!storedExceptions.contains(ch.toString())));
+        return appNames;
+    }
+
+    //Based on: https://www.geeksforgeeks.org/different-ways-to-get-list-of-all-apps-installed-in-your-android-phone/
+    public List<CharSequence> getAppNames2(final PackageManager pm){
+        final Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
+        mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+
+        // get list of all the apps installed
+        List<ResolveInfo> ril = pm.queryIntentActivities(mainIntent, 0);
+
+        // get size of ril and create a list
+        ArrayList<CharSequence> apps = new ArrayList<>(ril.size());
+        for (ResolveInfo ri : ril) {
+            if (ri.activityInfo != null) {
+                // get package
+                Resources res = null;
+                try {
+                    res = pm.getResourcesForApplication(ri.activityInfo.applicationInfo);
+                } catch (PackageManager.NameNotFoundException e) {
+                    e.printStackTrace();
+                    continue;
+                }
+                // if activity label res is found
+                String name;
+                if (ri.activityInfo.labelRes != 0) {
+                    name = res.getString(ri.activityInfo.labelRes);
+                } else {
+                    name = ri.activityInfo.applicationInfo.loadLabel(
+                            pm).toString();
+                }
+                apps.add(name);
+            }
         }
-        loadingDialog.dismiss();
-        new NotificationDialog(notificationPairs,this).show(connectedFragment.getParentFragmentManager(),"notificationSettings");
+        return apps;
     }
 
     @Override

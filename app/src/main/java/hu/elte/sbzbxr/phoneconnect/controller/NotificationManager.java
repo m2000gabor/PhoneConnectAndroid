@@ -30,8 +30,6 @@ public class NotificationManager {
         }
         if(!testForPermission(service)){Log.d(LOG_TAG, "User declined access to Notifications");return;}
 
-        Intent intent = new Intent(service, MyNotificationListenerService.class);
-        //service.startService(intent);
         MyNotificationListenerService.requestRebind( new ComponentName(service.getApplicationContext(), MyNotificationListenerService.class));
     }
 
