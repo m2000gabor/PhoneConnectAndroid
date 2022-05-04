@@ -7,6 +7,7 @@ import android.app.NotificationChannel;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
@@ -58,6 +59,7 @@ public class ServiceController extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
+        makeForeground();
         return binder;
     }
 
@@ -65,7 +67,9 @@ public class ServiceController extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        //For handler and looper and multi-thread: https://developer.android.com/guide/components/services
+    }
+
+    private void makeForeground(){
         createNotificationChannel();
         Intent intent1 = new Intent(this, MainActivity.class);
 
@@ -92,7 +96,9 @@ public class ServiceController extends Service {
         Log.d(LOG_TAG, "serviceController started");
         if(Objects.equals(intent.getAction(), CHOOSE_FOLDER)){
             connectionManager.folderChosen(intent, flags, startId);
+            return START_STICKY;
         }
+        makeForeground();
         return START_STICKY; // If we get killed, after returning from here, restart
     }
 
