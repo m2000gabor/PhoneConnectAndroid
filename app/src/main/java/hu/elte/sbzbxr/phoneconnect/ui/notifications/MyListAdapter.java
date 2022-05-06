@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import hu.elte.sbzbxr.phoneconnect.R;
+import hu.elte.sbzbxr.phoneconnect.model.notification.NotificationPair;
 
 public class MyListAdapter extends BaseAdapter {
     private final Activity activity;

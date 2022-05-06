@@ -14,13 +14,12 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 
 import hu.elte.sbzbxr.phoneconnect.controller.ServiceController;
-import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
 import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.NotificationFrame;
 
 public class MyNotificationListenerService extends NotificationListenerService {
     private static final String LOG_TAG = "NotificationListener";
     @Nullable private ServiceController controller;
-    private boolean isListening=false;
+    private boolean isConnectedToSystem =false;
     private boolean isStopped=false;
 
     private NotificationFrame getUsefulData(StatusBarNotification notification){
@@ -77,15 +76,11 @@ public class MyNotificationListenerService extends NotificationListenerService {
 
     @Override
     public void onListenerConnected() {
-        Log.v(LOG_TAG,"NotificationListener connected");
-        super.onListenerConnected();
-        isListening=true;
+        Log.i(LOG_TAG,"NotificationListener connected to system");
+        isConnectedToSystem =true;
         isStopped=false;
 
-        if(!mBound){
-            Intent i = new Intent(this, ServiceController.class);
-            bindService(i, mConnection, Context.BIND_IMPORTANT);
-        }
+        doBindService();
 
         for(StatusBarNotification notification : getActiveNotifications()){
             sendNotification(notification);
@@ -94,13 +89,12 @@ public class MyNotificationListenerService extends NotificationListenerService {
 
     @Override
     public void onListenerDisconnected() {
-        Log.v(LOG_TAG,"NotificationListener disconnected");
-        isListening=false;
+        Log.v(LOG_TAG,"NotificationListener disconnected from system");
+        isConnectedToSystem =false;
         isStopped=true;
-        super.onListenerDisconnected();
     }
 
-    boolean mBound=false;
+    boolean mShouldUnbind=false;
     private final ServiceConnection mConnection = new ServiceConnection() {
         // Called when the connection with the service is established
         public void onServiceConnected(ComponentName className, IBinder service) {
@@ -110,7 +104,6 @@ public class MyNotificationListenerService extends NotificationListenerService {
             ServiceController.LocalBinder binder = (ServiceController.LocalBinder) service;
             controller = binder.getService();
             controller.getNotificationManager().setNotificationListenerService(MyNotificationListenerService.this);
-            mBound = true;
             isStopped=false;
             controller.refreshData(controller.getConnectionManager().getViewModel());
         }
@@ -118,19 +111,47 @@ public class MyNotificationListenerService extends NotificationListenerService {
         // Called when the connection with the service disconnects unexpectedly
         public void onServiceDisconnected(ComponentName className) {
             Log.e("ScreenCapture", "onServiceDisconnected");
-            mBound = false;
             controller.getNotificationManager().setNotificationListenerService(null);
             controller = null;
             isStopped=true;
         }
     };
 
-    public boolean isListening(){
-        return isListening && !isStopped;
+    public boolean isConnectedToSystem(){
+        return isConnectedToSystem && !isStopped;
     }
 
     public void stop(){
         isStopped=true;
-        stopSelf();
+        if(!isConnectedToSystem) return;
+        doUnbindService();
+        try{
+            requestUnbind();
+        }catch (SecurityException e){
+            Log.w(LOG_TAG,e.getMessage());
+        }
+    }
+
+    void doBindService() {
+        if (bindService(new Intent(this, ServiceController.class), mConnection, Context.BIND_IMPORTANT)) {
+            mShouldUnbind = true;
+        } else {
+            Log.e(LOG_TAG, "The requested service doesn't " +
+                    "exist, or this client isn't allowed access to it.");
+        }
+    }
+
+    void doUnbindService() {
+        if (mShouldUnbind) {
+            // Release information about the service's state.
+            unbindService(mConnection);
+            mShouldUnbind = false;
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        doUnbindService();
     }
 }

@@ -14,4 +14,6 @@ public enum ActionType {
     
     PIECE_OF_FILE_SENT,
     LAST_PIECE_OF_FILE_SENT,
+
+    REQUEST_UI_REFRESH
 }

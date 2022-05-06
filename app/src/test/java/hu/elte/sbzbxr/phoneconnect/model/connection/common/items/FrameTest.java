@@ -11,7 +11,7 @@ public class FrameTest {
 
     @Test
     public void basicFileFrameTest() throws IOException {
-        FileFrame before = new FileFrame(FrameType.FILE,"filename",(long)"data".getBytes().length,"data".getBytes(), null, 0L);
+        FileFrame before = new FileFrame(FrameType.FILE,"filename",(long)"data".getBytes().length,null, (long)"data".getBytes().length, "data".getBytes());
         byte[] transformed = before.serialize().getAsBytes();
         ByteArrayInputStream inputStream = new ByteArrayInputStream(transformed);
         FrameType readType = NetworkFrameCreator.getType(inputStream); //readType

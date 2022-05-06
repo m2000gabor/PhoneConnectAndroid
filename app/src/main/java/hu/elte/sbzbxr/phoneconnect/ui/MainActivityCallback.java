@@ -14,5 +14,5 @@ public interface MainActivityCallback {
 
     void startDemoCapture();
 
-    boolean connectToServer(String ip, int port);
+    void connectToServer(String ip, int port);
 }

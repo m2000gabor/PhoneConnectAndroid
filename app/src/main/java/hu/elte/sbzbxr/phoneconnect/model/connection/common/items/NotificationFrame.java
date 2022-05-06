@@ -30,7 +30,8 @@ public class NotificationFrame extends NetworkFrame{
 
     public static NotificationFrame deserialize(InputStream inputStream) throws IOException {
         Deserializer deserializer = new Deserializer(inputStream);
-        return new NotificationFrame(deserializer.getString(),deserializer.getString(),deserializer.getString());
+        return new NotificationFrame(deserializer.getString(),
+                deserializer.getString(),deserializer.getString());
     }
 
     @SuppressWarnings("NullableProblems")

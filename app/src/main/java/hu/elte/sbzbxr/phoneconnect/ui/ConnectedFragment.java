@@ -2,6 +2,7 @@ package hu.elte.sbzbxr.phoneconnect.ui;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
 import android.icu.text.DateFormat;
@@ -21,12 +22,13 @@ import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.documentfile.provider.DocumentFile;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 
+import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,7 +48,8 @@ import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_RestoreListAvail
 import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_FilePieceSent;
 import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_LastPieceOfFileSent;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionLimiter;
-import hu.elte.sbzbxr.phoneconnect.ui.notifications.NotificationSettings;
+import hu.elte.sbzbxr.phoneconnect.model.notification.NotificationSettings;
+import hu.elte.sbzbxr.phoneconnect.ui.progress.FileTransferQueueDialog;
 import hu.elte.sbzbxr.phoneconnect.ui.progress.FileTransferUI;
 
 public class ConnectedFragment extends Fragment {
@@ -55,8 +58,8 @@ public class ConnectedFragment extends Fragment {
     private static final int REQUEST_FILE_PICKER = 2;
     private FragmentConnectedBinding binding;
     private MainActivityCallback activityCallback;
-    private FileTransferUI arrivingFileTransfer;
-    private FileTransferUI sendingFileTransfer;
+    private FileTransferUI incomingFileTransferUi;
+    private FileTransferUI outgoingFileTransferUi;
     private MainViewModel viewModel;
 
     @Override
@@ -85,19 +88,23 @@ public class ConnectedFragment extends Fragment {
                     pingSuccessful(((Action_PingArrived) networkAction).getField());
                     break;
                 case PIECE_OF_FILE_ARRIVED:
-                    arrivingFileTransfer.pieceOfFile(((Action_FilePieceArrived) networkAction).getField());
+                    viewModel.getIncomingFileTransferSummary().pieceOfFile(((Action_FilePieceArrived) networkAction).getField());
+                    incomingFileTransferUi.refresh(viewModel.getIncomingFileTransferSummary().getActiveTransfers());
                     break;
                 case LAST_PIECE_OF_FILE_ARRIVED:
-                    arrivingFileTransfer.endOfFile(((Action_LastPieceOfFileArrived) networkAction).getField());
+                    viewModel.getIncomingFileTransferSummary().endOfFile(((Action_LastPieceOfFileArrived) networkAction).getField());
+                    incomingFileTransferUi.refresh(viewModel.getIncomingFileTransferSummary().getActiveTransfers());
                     break;
                 case RESTORE_LIST_OF_AVAILABLE_BACKUPS:
                     availableToRestore(((Action_RestoreListAvailable) networkAction).getField());
                     break;
                 case PIECE_OF_FILE_SENT:
-                    sendingFileTransfer.pieceOfFile(((Action_FilePieceSent) networkAction).getField());
+                    viewModel.getOutgoingFileTransferSummary().pieceOfFile(((Action_FilePieceSent) networkAction).getField());
+                    outgoingFileTransferUi.refresh(viewModel.getOutgoingFileTransferSummary().getActiveTransfers());
                     break;
                 case LAST_PIECE_OF_FILE_SENT:
-                    sendingFileTransfer.endOfFile(((Action_LastPieceOfFileSent) networkAction).getField());
+                    viewModel.getOutgoingFileTransferSummary().endOfFile(((Action_LastPieceOfFileSent) networkAction).getField());
+                    outgoingFileTransferUi.refresh(viewModel.getOutgoingFileTransferSummary().getActiveTransfers());
                     break;
             }
         }
@@ -105,8 +112,8 @@ public class ConnectedFragment extends Fragment {
 
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        arrivingFileTransfer=new FileTransferUI(this,binding.includedFileArrivingPanel);
-        sendingFileTransfer=new FileTransferUI(this,binding.includedFileSendingPanel);
+        incomingFileTransferUi =new FileTransferUI(this,binding.includedFileArrivingPanel, false);
+        outgoingFileTransferUi =new FileTransferUI(this,binding.includedFileSendingPanel, true);
 
         viewModel.getActions().register(actionObserver);
         viewModel.getUiData().observe(getViewLifecycleOwner(), new Observer<ConnectedFragmentUIData>() {
@@ -140,17 +147,29 @@ public class ConnectedFragment extends Fragment {
         }else if(requestCode == REQUEST_FILE_PICKER && resultCode==Activity.RESULT_OK){
             // The result data contains a URI for the document or directory that
             // the user selected.
-            Uri uri;
             if (data != null) {
-                uri = data.getData();
-                // Perform operations on the document using its URI.
-                activityCallback.getServiceController().startFileTransfer(MyUriQuery.querySingleFile(uri,requireContext()));
+                ClipData clipData = data.getClipData();
+                if(clipData==null){//just one file is selected
+                    Uri uri = data.getData();
+                    // Perform operations on the document using its URI.
+                    activityCallback.getServiceController().startFileTransfer(MyUriQuery.querySingleFile(uri,requireContext()));
+                }else{//multiple files are selected
+                    List<MyFileDescriptor> descriptors = new ArrayList<>(clipData.getItemCount());
+                    for(int i = 0; i < clipData.getItemCount(); i++)
+                    {
+                        Uri uri = clipData.getItemAt(i).getUri();
+                        descriptors.add(MyUriQuery.querySingleFile(uri,requireContext()));
+
+                    }
+                    activityCallback.getServiceController().startFileTransfer(descriptors);
+                }
             }
         }
     }
 
 
     public void showConnectedUI(ConnectedFragmentUIData data){
+
         if(data.getIp()!=null && data.getPort()!=null){
             binding.connectedToLabel.setText(String.format("Connected to: %s:%s", data.getIp(),data.getPort()));
         }
@@ -195,7 +214,7 @@ public class ConnectedFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 NotificationSettings notificationSettings = new NotificationSettings(ConnectedFragment.this);
-                new Thread(notificationSettings::showDialog).start();
+                notificationSettings.showDialog();
             }
         });
 
@@ -211,12 +230,23 @@ public class ConnectedFragment extends Fragment {
         binding.includedFileSendingPanel.filesSendingLayoutHome.setVisibility(View.GONE);
         binding.includedFileSendingPanel.progressBar.setMax(100);
         binding.includedFileSendingPanel.sendOrArriveLabel.setText("Sending:");
-        binding.includedFileSendingPanel.stopButton.setOnClickListener((view)->stopSending());
+        //binding.includedFileSendingPanel.stopButton.setOnClickListener((view)->stopSending());
+        binding.includedFileArrivingPanel.showAllFileTransferButton.setOnClickListener(v->showAllOutgoingTransfer());
 
         binding.includedFileArrivingPanel.filesSendingLayoutHome.setVisibility(View.GONE);
         binding.includedFileArrivingPanel.progressBar.setMax(100);
         binding.includedFileArrivingPanel.sendOrArriveLabel.setText("Saving:");
-        binding.includedFileArrivingPanel.stopButton.setOnClickListener((view)->stopSaving());
+        // binding.includedFileArrivingPanel.stopButton.setOnClickListener((view)->stopSaving());
+        binding.includedFileArrivingPanel.showAllFileTransferButton.setOnClickListener(v->showAllIncomingTransfer());
+    }
+
+    public void showAllIncomingTransfer(){
+        FileTransferQueueDialog newFragment = new FileTransferQueueDialog(viewModel.getIncomingFileTransferSummary().getActiveTransfers(),false);
+        newFragment.show(getChildFragmentManager(), "incomingFiles");
+    }
+    public void showAllOutgoingTransfer(){
+        FileTransferQueueDialog newFragment = new FileTransferQueueDialog(viewModel.getOutgoingFileTransferSummary().getActiveTransfers(),true);
+        newFragment.show(getChildFragmentManager(), "outgoingFiles");
     }
 
     private void setSource(boolean isDemo){
@@ -247,6 +277,7 @@ public class ConnectedFragment extends Fragment {
         //Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
         intent.setType("*/*");
 
         // Optionally, specify a URI for the file that should appear in the
@@ -327,7 +358,15 @@ public class ConnectedFragment extends Fragment {
         if(dfile==null) return;
         String backupID = DateFormat.getDateTimeInstance().format(Calendar.getInstance().getTime())
                 .replace(':','_').replace(' ','_');
-        DocumentFile[] fileList = getFilesFromDir(dfile);
+        DocumentFile[] fileList = new DocumentFile[0];
+        try {
+            fileList = getFilesFromDir(dfile,0);
+        } catch (IOException e) {
+            e.printStackTrace();
+            Toast.makeText(requireContext(),"Cannot send more than a 100 files",Toast.LENGTH_SHORT).show();
+            Log.e(TAG,"Cannot send more than a 100 files");
+            return;
+        }
         long totalSize = Arrays.stream(fileList).map(DocumentFile::length).reduce(0L, Long::sum);
         List<MyFileDescriptor> fileDescriptorList = new ArrayList<>(fileList.length);
         for(DocumentFile documentFile : fileList){
@@ -336,13 +375,14 @@ public class ConnectedFragment extends Fragment {
         activityCallback.getServiceController().sendBackupFiles(fileDescriptorList,backupID,totalSize);
     }
 
-    private DocumentFile[] getFilesFromDir(DocumentFile parent){
+    private DocumentFile[] getFilesFromDir(DocumentFile parent, long numOfCall) throws IOException {
+        if(numOfCall>=100) throw new IOException("Too much file to send");
         if(parent==null || !parent.exists()) return new DocumentFile[0];
         if(parent.isDirectory()){
             DocumentFile[] documentFiles = parent.listFiles();
             ArrayList<DocumentFile> ret = new ArrayList<>();
             for(DocumentFile d: documentFiles){
-                ret.addAll(Arrays.asList(getFilesFromDir(d)));
+                ret.addAll(Arrays.asList(getFilesFromDir(d,++numOfCall)));
             }
             return ret.toArray(new DocumentFile[0]);
         }else{
@@ -355,7 +395,7 @@ public class ConnectedFragment extends Fragment {
         if(backupList.isEmpty()){
             Toast.makeText(getContext(),"There's no available backup to restore",Toast.LENGTH_SHORT).show();
         }else {
-            ListDialog newFragment = new ListDialog(backupList);
+            RestoreListDialog newFragment = new RestoreListDialog(backupList);
             newFragment.show(getChildFragmentManager(), "backupListChooser");
         }
     }
@@ -378,5 +418,21 @@ public class ConnectedFragment extends Fragment {
 
     public MainViewModel getViewModel() {
         return viewModel;
+    }
+
+    public MainActivityCallback getActivityCallback(){
+        return activityCallback;
+    }
+
+    //From: https://www.baeldung.com/java-folder-size
+    public static String convertBytesToPrettyString(long sizeInBytes){
+        if(sizeInBytes==0){return "0 B";}
+        String[] units = new String[] { "B", "KB", "MB", "GB", "TB" };
+        int unitIndex = (int) (Math.log10(sizeInBytes) / 3);
+        double unitValue = 1 << (unitIndex * 10);
+
+        return new DecimalFormat("#,##0.#")
+                .format(sizeInBytes / unitValue) + " "
+                + units[unitIndex];
     }
 }

@@ -1,6 +1,5 @@
 package hu.elte.sbzbxr.phoneconnect.ui;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -10,9 +9,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
-import androidx.activity.result.ActivityResultCallback;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
@@ -66,6 +62,7 @@ public class ToConnectFragment extends Fragment {
             } else {
                 Log.v("Scan", "Scanned: "+result.getContents());
                 String[] scanned = result.getContents().split(":");
+                if(scanned.length!=2){Log.e("Scan","Invalid data");return;}
                 fillEditTexts(scanned[0],scanned[1]);
                 binding.connectButton.callOnClick();
             }
@@ -98,19 +95,15 @@ public class ToConnectFragment extends Fragment {
                 Toast.makeText(getContext(), "Entered port is not a number", Toast.LENGTH_SHORT).show();
                 System.err.println("Entered port is not a number");
             }
-            if(!activityCallback.connectToServer(ip,port)){
-                Toast.makeText(getContext(), "Invalid ip or port", Toast.LENGTH_SHORT).show();
-                System.err.println("Invalid ip or port");
-            }
+            activityCallback.connectToServer(ip,port);
         });
 
         binding.readQrButton.setText("Scan QR");
         binding.readQrButton.setOnClickListener(v -> startQrReaderActivity());
     }
 
-
+    //Based on: https://stackoverflow.com/questions/8831050/android-how-to-read-qr-code-in-my-application
     public void startQrReaderActivity(){
-        //From: https://stackoverflow.com/questions/8831050/android-how-to-read-qr-code-in-my-application
         //Docs: https://zxing.github.io/zxing/apidocs/com/google/zxing/integration/android/IntentIntegrator.html#IntentIntegrator-android.app.Fragment-
         IntentIntegrator.forSupportFragment(ToConnectFragment.this)
                 .setCaptureActivity(QrReaderActivity.class)

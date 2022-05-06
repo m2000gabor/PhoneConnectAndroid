@@ -11,7 +11,7 @@ import hu.elte.sbzbxr.phoneconnect.model.connection.common.items.SegmentFrame;
 
 //version: 1.6
 public class FileCutter {
-    private static final int FILE_FRAME_MAX_SIZE=320000;//in bytes
+    static final int FILE_FRAME_MAX_SIZE=320000;//in bytes
     private final InputStream inputStream;
     private final String filename;
     private boolean hadClosingPart =false;
@@ -39,8 +39,7 @@ public class FileCutter {
 
     public void next(){
         if(isEnd) return;
-        try{
-            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(FILE_FRAME_MAX_SIZE);
+        try(ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(FILE_FRAME_MAX_SIZE);){
             int writtenBytes=0;
             int read = inputStream.read();
             if(read==-1){
@@ -86,6 +85,16 @@ public class FileCutter {
             default:return new FileFrame(fileType,filename,0L, folderName, folderSize,new byte[0]);
             case BACKUP_FILE: return new BackupFileFrame(fileType,filename, 0L, folderName, folderSize, new byte[0]);
             case SEGMENT: return new SegmentFrame(filename, folderName, new byte[0]);
+        }
+    }
+
+    public void close(){
+        current=getEndOfFileFrame();
+        isEnd=true;
+        try {
+            inputStream.close();
+        } catch (IOException ignore) {
+
         }
     }
 }

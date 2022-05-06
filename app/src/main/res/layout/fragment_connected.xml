@@ -36,7 +36,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="48dp"
         android:layout_marginTop="20dp"
-        android:text="Send files"
+        android:text="Send file"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/connectedToLabel" />
 
@@ -60,7 +60,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:text="Backup Media"
+        android:text="Backup Folder"
         app:layout_constraintEnd_toEndOf="@+id/sendFilesButton"
         app:layout_constraintStart_toStartOf="@+id/sendFilesButton"
         app:layout_constraintTop_toBottomOf="@+id/sendFilesButton" />
@@ -70,7 +70,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="29dp"
-        android:text="Restore Media"
+        android:text="Restore Folder"
         app:layout_constraintBottom_toBottomOf="@+id/saveMediaActionButton"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/saveMediaActionButton"
@@ -88,7 +88,9 @@
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/saveMediaActionButton"
-        app:layout_constraintVertical_bias="0.0" />
+        app:layout_constraintVertical_bias="0.0"
+        android:backgroundTint="#F44336"
+        />
 
     <include
         android:id="@+id/includedFileArrivingPanel"

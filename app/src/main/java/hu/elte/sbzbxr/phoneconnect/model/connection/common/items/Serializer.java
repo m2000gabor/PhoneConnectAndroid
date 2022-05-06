@@ -2,8 +2,9 @@ package hu.elte.sbzbxr.phoneconnect.model.connection.common.items;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
-//version 1.3
+//version 1.4
 public class Serializer {
     private final ByteArrayOutputStream outputStream;
 
@@ -16,7 +17,7 @@ public class Serializer {
         return this;
     }
     public Serializer addField(String str) {
-        return addField(str.getBytes());
+        return addField(str.getBytes(StandardCharsets.UTF_8));
     }
 
     public Serializer addField(byte[] data) {

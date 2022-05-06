@@ -1,5 +1,7 @@
 package hu.elte.sbzbxr.phoneconnect.model.connection.buffer;
 
+import androidx.annotation.NonNull;
+
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,6 +16,10 @@ public class OutgoingBuffer {
 
     public void clear() {
         map.forEach((prio,queue)->queue.clear());
+    }
+
+    public void removeOutgoingFileFrames() {
+        map.remove(getPriority(FrameType.FILE));
     }
 
     private enum BufferPriority{
@@ -47,7 +53,9 @@ public class OutgoingBuffer {
         NetworkFrame ret=null;
         while (ret==null){
             for(BufferPriority p : BufferPriority.values()){
-                ret = map.get(p).poll();
+                BlockingQueue<NetworkFrame> queue = map.get(p);
+                if(queue==null) continue;
+                ret = queue.poll();
                 if(ret !=null) break;
             }
         }
@@ -56,35 +64,37 @@ public class OutgoingBuffer {
     }
 
 
-    public void forceInsert(NetworkFrame frame){
+    public void put(NetworkFrame frame) throws InterruptedException {
+        BufferPriority priority = getPriority(frame.type);
+        if(frame.type== FrameType.SEGMENT){((ScreenShotFrame)frame).getScreenShot().addTimestamp("beforeInsert",System.currentTimeMillis());}
+        if(priority==BufferPriority.SEGMENT){
+            if(!map.get(priority).offer(frame)){
+                onBufferIsFull(map.get(priority),frame);
+            }
+        }else{
+            map.get(priority).put(frame);
+        }
+        if(frame.type== FrameType.SEGMENT){((ScreenShotFrame)frame).getScreenShot().addTimestamp("inserted",System.currentTimeMillis());}
+    }
+
+    @NonNull
+    private BufferPriority getPriority(FrameType type) {
         BufferPriority priority;
-        switch (frame.type){
+        switch (type){
             default:priority=BufferPriority.DEFAULT;break;
             case INTERNAL_MESSAGE:priority=BufferPriority.INSTANT;break;
             case NOTIFICATION: priority=BufferPriority.IMPORTANT;break;
             case SEGMENT:priority=BufferPriority.SEGMENT; break;
             case FILE: priority=BufferPriority.FILE;break;
         }
-        if(frame.type== FrameType.SEGMENT){((ScreenShotFrame)frame).getScreenShot().addTimestamp("beforeInsert",System.currentTimeMillis());}
-        try {
-            if(priority==BufferPriority.SEGMENT){
-                if(!map.get(priority).offer(frame)){
-                    onBufferIsFull(map.get(priority),frame);
-                }
-            }else{
-                map.get(priority).put(frame);
-            }
-            if(frame.type== FrameType.SEGMENT){((ScreenShotFrame)frame).getScreenShot().addTimestamp("inserted",System.currentTimeMillis());}
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        return priority;
     }
 
     private static int getMaxSize(BufferPriority type){
         switch (type){
             default: return Integer.MAX_VALUE;
             case SEGMENT: return 5;
-            case FILE: return 20;
+            case FILE: return 10;
         }
     }
 

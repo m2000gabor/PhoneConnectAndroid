@@ -8,7 +8,6 @@ import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketOptions;
 import java.net.UnknownHostException;
 
 //inspired: http://www.androidcoding.in/2020/05/12/work-manager_onetimeworkrequest/
@@ -36,9 +35,9 @@ public class ConnectionCreator extends RunnableWithHandler {
         try{
             try {
                 socket = new Socket();
-                socket.setTcpNoDelay(true);
-                socket.setTrafficClass(0x10);//low-delay
-                socket.connect(new InetSocketAddress(InetAddress.getByName(ip),port));
+                //socket.setTcpNoDelay(true);
+                //socket.setTrafficClass(0x10);//low-delay
+                socket.connect(new InetSocketAddress(InetAddress.getByName(ip),port),5000);
             } catch (UnknownHostException e) {
                 System.err.println("Unknown host");
                 e.printStackTrace();

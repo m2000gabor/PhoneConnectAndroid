@@ -39,14 +39,15 @@ import hu.elte.sbzbxr.phoneconnect.controller.ServiceController;
 import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
 import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 
-public class ScreenCapture3 extends Service {
+@Deprecated //Not finished yet
+public class ScreenCapture_Refactored extends Service {
     private static final String LOG_TAG ="ScreenCapture3";
     private static final String VIRTUAL_DISPLAY_NAME= "VirtualDisplay";
     VirtualDisplay mVirtualDisplay;
     ImageReader imageReader;
     ConnectionManager connectionManager;
 
-    public ScreenCapture3(){}
+    public ScreenCapture_Refactored(){}
 
     @Nullable
     @Override
@@ -136,7 +137,7 @@ public class ScreenCapture3 extends Service {
     }
 
     @SuppressLint("WrongConstant")
-    private static ImageReader createImageReader(ScreenCapture3 instance, int metrics_width, int metrics_height){
+    private static ImageReader createImageReader(ScreenCapture_Refactored instance, int metrics_width, int metrics_height){
         ImageReader imageReader = ImageReader.newInstance(metrics_width,metrics_height, PixelFormat.RGBA_8888,50);
         imageReader.setOnImageAvailableListener(reader -> instance.onImageAvailable(reader,metrics_width,metrics_height),null);
         return imageReader;

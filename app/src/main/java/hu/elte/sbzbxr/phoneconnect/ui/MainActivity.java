@@ -20,6 +20,7 @@ import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.ViewModelProvider;
 
 import java.util.AbstractMap;
+import java.util.ArrayDeque;
 
 import hu.elte.sbzbxr.phoneconnect.R;
 import hu.elte.sbzbxr.phoneconnect.controller.MainViewModel;
@@ -30,8 +31,9 @@ import hu.elte.sbzbxr.phoneconnect.model.actions.Action_FailMessage;
 import hu.elte.sbzbxr.phoneconnect.model.actions.NetworkAction;
 import hu.elte.sbzbxr.phoneconnect.model.actions.helper.ActionType;
 import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.Action_NetworkStateConnected;
+import hu.elte.sbzbxr.phoneconnect.ui.progress.FileTransferQueueDialog;
 
-public class MainActivity extends AppCompatActivity implements MainActivityCallback, ListDialog.NoticeListDialogListener {
+public class MainActivity extends AppCompatActivity implements MainActivityCallback, RestoreListDialog.NoticeListDialogListener, FileTransferQueueDialog.FileTransferDialogListener {
     public static final boolean LOG_SEGMENTS=false;
     public static final String IP_ADDRESS = "ipAddress";
     public static final String PORT = "port";
@@ -60,8 +62,6 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
         myToolbar.setTitle("Phone Connect");
         myToolbar.setTitleTextColor(Color.WHITE);
 
-        startForegroundService(new Intent(this,ServiceController.class));
-
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
         viewModel.getActions().register(new ActionObserver() {
             @Override
@@ -83,6 +83,9 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
                     afterDisconnect();
                     Toast.makeText(MainActivity.this,"Cannot connect",Toast.LENGTH_SHORT).show();
                     break;
+                case REQUEST_UI_REFRESH:
+                     viewModel.refreshData(getServiceController());
+                     break;
             }
             }
         });
@@ -160,19 +163,23 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
     @Override
     protected void onStart() {
         super.onStart();
-        Intent intent = new Intent(this, ServiceController.class);
-        bindService(intent, connection, Context.BIND_IMPORTANT);
+        startAndBindController();
+        viewModel.refreshData(getServiceController());
     }
 
     @Override
     protected void onStop() {
-        unbindService(connection);
-        mBound = false;
+        if (getServiceController() != null) {
+            getServiceController().mayStop();
+        }else{
+            unbindService(connection);
+        }
         super.onStop();
     }
 
     @Nullable private ServiceController serviceController;
     private boolean mBound = false;
+    private final ArrayDeque<Runnable> runWhenBoundController = new ArrayDeque<>(1);
     private final ServiceConnection connection = new ServiceConnection() {
 
         @Override
@@ -183,6 +190,9 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
             serviceController = binder.getService();
             serviceController.refreshData(viewModel);
             mBound = true;
+            while (!runWhenBoundController.isEmpty()){
+                runWhenBoundController.pop().run();
+            }
         }
 
         @Override
@@ -231,15 +241,21 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
     }
 
     @Override
-    public boolean connectToServer(String ip, int port) {
-        boolean r = getServiceController().connectToServer(ip, port);
+    public void connectToServer(String ip, int port) {
         LoadingDialog loadingDialog = new LoadingDialog("Connecting...");
         FragmentManager fragmentManager = getSupportFragmentManager();
         fragmentManager.beginTransaction()
                 .replace(FRAGMENT_CONTAINER_ID, loadingDialog, LOADING_FRAGMENT_TAG)
                 .setReorderingAllowed(true)
                 .commit();
-        return r;
+
+        ServiceController sc = getServiceController();
+        if(sc!=null){
+            sc.connectToServer(ip, port);
+        }else{
+            runWhenBoundController.add(()->{getServiceController().connectToServer(ip, port);});
+            startAndBindController();
+        }
     }
 
     @Override
@@ -256,7 +272,28 @@ public class MainActivity extends AppCompatActivity implements MainActivityCallb
 
     @Override
     protected void onDestroy() {
-        stopService(new Intent(this,ServiceController.class));
+        //stopService(new Intent(this,ServiceController.class));
         super.onDestroy();
+    }
+
+    @Override
+    public void stopAllOutgoingTransfer() {
+        //Toast.makeText(this,"This feature has not been implemented yet.",Toast.LENGTH_SHORT).show();
+
+        if (getServiceController() != null) {
+            getServiceController().getConnectionManager().clearOutgoingFileTransferQueue();
+        }
+        Toast.makeText(this,"All outgoing transfers are stopped.",Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void stopAllIncomingTransfer() {
+        Toast.makeText(this,"This feature has not been implemented yet.",Toast.LENGTH_SHORT).show();
+    }
+
+    private void startAndBindController(){
+        Intent intent = new Intent(this, ServiceController.class);
+        startForegroundService(new Intent(this,ServiceController.class));
+        bindService(intent, connection, Context.BIND_IMPORTANT);
     }
 }

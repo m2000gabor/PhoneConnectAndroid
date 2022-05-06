@@ -4,12 +4,9 @@ import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.Service;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.graphics.Bitmap;
 import android.graphics.PixelFormat;
 import android.hardware.display.DisplayManager;
@@ -20,23 +17,16 @@ import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
 import android.os.Binder;
 import android.os.IBinder;
-import android.util.Log;
 import android.view.Surface;
-
-import androidx.annotation.Nullable;
-import androidx.core.app.NotificationCompat;
 
 import java.nio.Buffer;
 import java.text.DateFormat;
 import java.util.Calendar;
-import java.util.concurrent.TimeUnit;
 
 import hu.elte.sbzbxr.phoneconnect.controller.ServiceController;
-import hu.elte.sbzbxr.phoneconnect.model.connection.ConnectionManager;
-import hu.elte.sbzbxr.phoneconnect.ui.MainActivity;
 
-public class ScreenCapture2 extends Service {
-    private static final String LOG_TAG ="ScreenCapture2";
+public class ScreenCapture extends Service {
+    private static final String LOG_TAG ="ScreenCapture";
     private static final String VIRTUAL_DISPLAY_NAME= "VirtualDisplay";
     MediaProjection projection;
     MediaProjectionManager mediaProjectionManager;
@@ -44,13 +34,13 @@ public class ScreenCapture2 extends Service {
     ImageReader imageReader;
     private ServiceController serviceController;
 
-    public ScreenCapture2(){}
+    public ScreenCapture(){}
 
-    private final IBinder binder = new ScreenCapture2.LocalBinder();
+    private final IBinder binder = new ScreenCapture.LocalBinder();
     public class LocalBinder extends Binder {
-        public ScreenCapture2 getService() {
+        public ScreenCapture getService() {
             // Return this instance of LocalService so clients can call public methods
-            return ScreenCapture2.this;
+            return ScreenCapture.this;
         }
     }
     @Override
@@ -77,7 +67,7 @@ public class ScreenCapture2 extends Service {
         this.serviceController=controller;
         createNotificationChannel();
         startForeground(1, notification);
-        createMediaProjection(
+        startRecording(
                 intent.getIntExtra("resultCode",0),
                 intent.getParcelableExtra("data"),
                 intent.getIntExtra("metrics_width",-1),
@@ -86,22 +76,14 @@ public class ScreenCapture2 extends Service {
         );
     }
 
-    /*
-    https://stackoverflow.com/questions/5524672/is-it-possible-to-use-camcorderprofile-without-audio-source/34045905
-    https://stackoverflow.com/questions/61276730/media-projections-require-a-foreground-service-of-type-serviceinfo-foreground-se
-     */
     @SuppressLint("WrongConstant")
-    private void createMediaProjection(int resultCode, Intent data,
-                                       int metrics_width, int metrics_height, int metrics_densityDpi){
+    private void startRecording(int resultCode, Intent data,
+                                int metrics_width, int metrics_height, int metrics_densityDpi){
         mediaProjectionManager = (MediaProjectionManager) this.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
 
-        //create media projection
         projection = mediaProjectionManager.getMediaProjection(resultCode, data);
 
-        // Let MediaProjection callback use the SurfaceTextureHelper thread.
-        //projection.registerCallback(mediaProjectionCallback, surfaceTextureHelper.getHandler());
-
-        //From: https://stackoverflow.com/questions/37143968/how-to-handle-image-capture-with-mediaprojection-on-orientation-change
+        //For orientationChange: https://stackoverflow.com/questions/37143968/how-to-handle-image-capture-with-mediaprojection-on-orientation-change
         imageReader = ImageReader.newInstance(metrics_width,metrics_height, PixelFormat.RGBA_8888,5);
         imageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
             @Override
@@ -111,6 +93,7 @@ public class ScreenCapture2 extends Service {
 
                     long timeStamp_firstSeen = System.currentTimeMillis();
 
+                    //Based on: https://stackoverflow.com/questions/27219799/system-error-capturing-the-output-of-a-mediaprojection-virtual-display-to-an-ima
                     Image.Plane[] planes = im.getPlanes();
                     Buffer imageBuffer = planes[0].getBuffer().rewind();
 

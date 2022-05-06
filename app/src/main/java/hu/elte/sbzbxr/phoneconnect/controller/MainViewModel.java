@@ -1,11 +1,6 @@
 package hu.elte.sbzbxr.phoneconnect.controller;
 
 import android.app.Application;
-import android.content.ComponentName;
-import android.content.Context;
-import android.content.Intent;
-import android.content.ServiceConnection;
-import android.os.IBinder;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -15,19 +10,13 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
 import java.net.Socket;
-import java.util.logging.Logger;
 
 import hu.elte.sbzbxr.phoneconnect.model.ActionDelivery;
 import hu.elte.sbzbxr.phoneconnect.model.actions.NetworkAction;
-import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_FilePieceArrived;
-import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_LastPieceOfFileArrived;
-import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_PingArrived;
-import hu.elte.sbzbxr.phoneconnect.model.actions.arrived.Action_RestoreListAvailable;
 import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.Action_NetworkStateConnected;
 import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.Action_NetworkStateDisconnected;
 import hu.elte.sbzbxr.phoneconnect.model.actions.networkstate.NetworkStateAction;
-import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_FilePieceSent;
-import hu.elte.sbzbxr.phoneconnect.model.actions.sent.Action_LastPieceOfFileSent;
+import hu.elte.sbzbxr.phoneconnect.model.fileTransferProgress.FileTransferSummary;
 import hu.elte.sbzbxr.phoneconnect.model.notification.NotificationFilter;
 import hu.elte.sbzbxr.phoneconnect.ui.ConnectedFragmentUIData;
 
@@ -36,6 +25,8 @@ public class MainViewModel extends AndroidViewModel {
     private MutableLiveData<NetworkStateAction> connectionData;
     private MutableLiveData<ConnectedFragmentUIData> uiData;
     public final NotificationFilter notificationFilter = new NotificationFilter();
+    private final FileTransferSummary incomingFileTransferSummary = new FileTransferSummary();
+    private final FileTransferSummary outgoingFileTransferSummary = new FileTransferSummary();
 
     public MainViewModel(@NonNull Application application) {
         super(application);
@@ -88,10 +79,12 @@ public class MainViewModel extends AndroidViewModel {
         }
         NetworkStateAction oldVal = connectionData.getValue();
         NetworkStateAction newVal;
-        Socket s = serviceController.isConnected();
-        if(s!=null){
+        Socket s = serviceController.getSocket();
+        if(ServiceController.isConnected(s)){
+            Log.d(MainViewModel.class.toString(),"Determine whether it is connected. Result: connected");
             newVal=new Action_NetworkStateConnected(s.getInetAddress().getHostAddress(),s.getPort());
         }else{
+            Log.d(MainViewModel.class.toString(),"Determine whether it is connected. Result: disconnected");
             newVal=new Action_NetworkStateDisconnected();
         }
 
@@ -110,5 +103,13 @@ public class MainViewModel extends AndroidViewModel {
 
     private void postNetworkAction(NetworkStateAction action){
         connectionData.postValue(action);
+    }
+
+    public FileTransferSummary getIncomingFileTransferSummary() {
+        return incomingFileTransferSummary;
+    }
+
+    public FileTransferSummary getOutgoingFileTransferSummary() {
+        return outgoingFileTransferSummary;
     }
 }

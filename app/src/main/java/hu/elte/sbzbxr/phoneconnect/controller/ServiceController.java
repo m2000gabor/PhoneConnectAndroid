@@ -7,10 +7,13 @@ import android.app.NotificationChannel;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 
+import androidx.annotation.Nullable;
+import androidx.annotation.WorkerThread;
 import androidx.core.app.NotificationCompat;
 
 import java.net.Socket;
@@ -56,6 +59,7 @@ public class ServiceController extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
+        makeForeground();
         return binder;
     }
 
@@ -63,7 +67,9 @@ public class ServiceController extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        //For handler and looper and multi-thread: https://developer.android.com/guide/components/services
+    }
+
+    private void makeForeground(){
         createNotificationChannel();
         Intent intent1 = new Intent(this, MainActivity.class);
 
@@ -90,13 +96,34 @@ public class ServiceController extends Service {
         Log.d(LOG_TAG, "serviceController started");
         if(Objects.equals(intent.getAction(), CHOOSE_FOLDER)){
             connectionManager.folderChosen(intent, flags, startId);
+            return START_STICKY;
         }
+        makeForeground();
         return START_STICKY; // If we get killed, after returning from here, restart
     }
 
     @Override
     public void onDestroy() {
+        new Thread(
+                ()->{
+                    stopScreenCapture();
+                    connectionManager.disconnect();
+                }
+        ){}.start();
         Log.d(LOG_TAG, "serviceController destroyed");
+        super.onDestroy();
+    }
+
+    @Override
+    public boolean onUnbind(Intent intent) {
+        mayStop();
+        return super.onUnbind(intent);
+    }
+
+    public void mayStop(){
+        if(!isConnected(getSocket())){
+            stopSelf();
+        }
     }
 
     public void refreshData(MainViewModel viewModel) {
@@ -132,8 +159,10 @@ public class ServiceController extends Service {
     }
 
     public void disconnectFromServer() {
-        screenCaptureManager.stop();
-        connectionManager.disconnect();
+        new Thread(()->{
+            stopScreenCapture();
+            connectionManager.disconnect();
+        }).start();
     }
 
     public void startNotificationListening(MainActivity mainActivity) {
@@ -156,6 +185,9 @@ public class ServiceController extends Service {
         connectionManager.sendMessage(new StartRestoreMessageFrame(restoreID));
     }
 
+    public void startFileTransfer(List<MyFileDescriptor> myFileDescriptors) {
+        connectionManager.sendFiles(myFileDescriptors, FrameType.FILE, null, 0);
+    }
     public void startFileTransfer(MyFileDescriptor myFileDescriptor) {
         connectionManager.sendFiles(Collections.singletonList(myFileDescriptor), FrameType.FILE, null, 0);
     }
@@ -167,11 +199,15 @@ public class ServiceController extends Service {
         connectionManager.sendFiles(myFileDescriptors, FrameType.BACKUP_FILE, backupId, folderSize);
     }
 
-    /**
-     * @return the socket if connected, null otherwise
-     */
-    public Socket isConnected() {
+
+    @Nullable
+    public Socket getSocket() {
         return connectionManager.getTcpSocket();
+    }
+
+    public static boolean isConnected(@Nullable Socket socket){
+        if(socket ==null) return false;
+        return socket.isConnected() && !socket.isClosed();
     }
 
     public void setNetworkLimit(ConnectionLimiter limiter) {
@@ -195,10 +231,10 @@ public class ServiceController extends Service {
     }
 
     public ConnectedFragmentUIData getConnectedUIData(){
-        Socket s = isConnected();
+        Socket s = getSocket();
         String ip = null;
         String port = null;
-        if(s!=null){
+        if(s!=null && s.isConnected()){
             ip=s.getInetAddress().getHostAddress();
             port = String.valueOf(s.getPort());
         }

@@ -1,12 +1,8 @@
 package hu.elte.sbzbxr.phoneconnect.controller;
 
-import android.app.Activity;
 import android.app.Service;
 import android.content.ComponentName;
-import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
-import android.os.IBinder;
 import android.provider.Settings;
 import android.util.Log;
 
@@ -34,21 +30,18 @@ public class NotificationManager {
         }
         if(!testForPermission(service)){Log.d(LOG_TAG, "User declined access to Notifications");return;}
 
-        Intent intent = new Intent(service, MyNotificationListenerService.class);
-        service.startService(intent);
-        //service.bindService(intent,connection, Context.BIND_IMPORTANT);
+        MyNotificationListenerService.requestRebind( new ComponentName(service.getApplicationContext(), MyNotificationListenerService.class));
     }
 
     /**
      *
-     * @param service
-     * @return true if the NotificationService ran and successfully stopped, false otherwise
+     * @param service The service that initiates the stop
      */
-    public boolean stop(Service service){
+    public void stop(Service service){
         if (notificationListenerService != null) {
             notificationListenerService.stop();
         }
-        return service.stopService(new Intent(service,MyNotificationListenerService.class));
+        //return service.stopService(new Intent(service,MyNotificationListenerService.class));
     }
 
     private static void requestNotificationListeningPermission(Service service) {
@@ -62,7 +55,7 @@ public class NotificationManager {
 
     public boolean isListening(){
         if(notificationListenerService==null) return false;
-        return notificationListenerService.isListening();
+        return notificationListenerService.isConnectedToSystem();
     }
 
     public void setNotificationListenerService(@Nullable MyNotificationListenerService notificationListenerService) {

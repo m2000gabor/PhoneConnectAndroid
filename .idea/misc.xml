@@ -4,6 +4,7 @@
     <option name="filePathToZoomLevelMap">
       <map>
         <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/drawable/border.xml" value="0.3828125" />
+        <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/drawable/ic_launcher_background.xml" value="0.2703125" />
         <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/layout/activity_main.xml" value="0.264" />
         <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/layout/activity_settings.xml" value="0.264" />
         <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/layout/content_main.xml" value="0.2359375" />
@@ -22,6 +23,7 @@
         <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/layout/service_item_streaming.xml" value="0.36666666666666664" />
         <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/layout/settings_activity.xml" value="0.36666666666666664" />
         <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/menu/main_settings_menu.xml" value="0.36666666666666664" />
+        <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" value="0.2703125" />
         <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/xml/root_preferences.xml" value="0.36666666666666664" />
         <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/xml/settings_fragment.xml" value="0.36666666666666664" />
         <entry key="..\:/Users/Gabor/StudioProjects/PhoneConnectAndroid/app/src/main/res/xml/settings_xml.xml" value="0.36666666666666664" />

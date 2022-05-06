@@ -4,8 +4,9 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
-//version 1.4
+//version 1.5
 public class Deserializer {
     private final InputStream inputStream;
 
@@ -21,7 +22,7 @@ public class Deserializer {
     public String getString() throws IOException{
         int l = NetworkFrameCreator.readLength(inputStream);
         if(l<0) throw new EOFException("Nothing read");
-        return new String(NetworkFrameCreator.readNBytes(inputStream,l).array());
+        return new String(NetworkFrameCreator.readNBytes(inputStream,l).array(), StandardCharsets.UTF_8);
     }
 
     public byte[] getByteArray() throws IOException{

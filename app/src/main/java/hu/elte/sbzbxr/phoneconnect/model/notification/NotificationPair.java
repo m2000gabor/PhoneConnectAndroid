@@ -1,4 +1,4 @@
-package hu.elte.sbzbxr.phoneconnect.ui.notifications;
+package hu.elte.sbzbxr.phoneconnect.model.notification;
 
 public class NotificationPair {
     public String app;
