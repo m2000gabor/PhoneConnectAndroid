@@ -278,7 +278,7 @@ public class ConnectionManager {
 
     private void pingArrived(PingMessageFrame messageFrame){
         messageFrame.answerArrived();
-        viewModel.postAction(new Action_PingArrived("Round-trip latency: "+messageFrame.calculateLatency()+"ms"));
+        viewModel.postAction(new Action_PingArrived("Round-trip time: "+messageFrame.calculateLatency()+"ms"));
         System.out.println("Successful ping! \nReceived: "+ messageFrame.toString());
     }
 
